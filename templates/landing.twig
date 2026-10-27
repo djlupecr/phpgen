@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} — Gerador de CRUDs Enterprise</title>
+    <meta name="description" content="Gerador de CRUDs PHP com arquitetura moderna, segurança bancária, IA integrada e deploy em Docker.">
+    <meta name="keywords" content="crud generator, php, phprunner, admin panel, api rest, jwt, docker">
+    <meta property="og:title" content="{{ app_name }} — Gerador de CRUDs Enterprise">
+    <meta property="og:description" content="Gerador de CRUDs PHP com arquitetura moderna, segurança bancária, IA integrada e deploy em Docker.">
+    <meta property="og:type" content="website">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; }
+        .hero-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            transition: all 0.3s ease;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-base-100 text-base-content">
+
+    <!-- Header -->
+    <header class="w-full border-b border-base-300 bg-base-100/95 backdrop-blur">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+            <a href="?action=landing" class="text-2xl font-bold gradient-text">{{ app_name }}</a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="#features" class="text-sm hover:text-primary transition">Features</a>
+                <a href="#stack" class="text-sm hover:text-primary transition">Stack</a>
+                <a href="#pricing" class="text-sm hover:text-primary transition">Preços</a>
+                <a href="?action=api_docs" class="text-sm hover:text-primary transition">API Docs</a>
+            </nav>
+            <div class="flex items-center gap-2">
+                <a href="?action=login" class="btn btn-ghost btn-sm">Entrar</a>
+                <a href="?action=install" class="btn btn-primary btn-sm">Instalar</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-bg text-white">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 py-24 md:py-32 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                Gerador de CRUDs<br>
+                <span class="text-yellow-300">Enterprise</span>
+            </h1>
+            <p class="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10">
+                Arquitetura MVC, JWT revogável, Multi-Tenant, Editor Visual drag-and-drop,
+                API REST com Swagger, IA integrada e deploy em Docker.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="?action=install" class="btn btn-lg btn-warning text-black font-bold">
+                    🚀 Instalar Agora
+                </a>
+                <a href="https://github.com/djlupecr/phpgen" target="_blank" class="btn btn-lg btn-outline text-white border-white hover:bg-white hover:text-black">
+                    ⭐ Ver no GitHub
+                </a>
+            </div>
+            <div class="mt-8 flex flex-wrap justify-center gap-4 text-sm text-white/80">
+                <span class="badge badge-outline text-white border-white/50">146 testes</span>
+                <span class="badge badge-outline text-white border-white/50">Docker</span>
+                <span class="badge badge-outline text-white border-white/50">JWT</span>
+                <span class="badge badge-outline text-white border-white/50">Multi-Tenant</span>
+                <span class="badge badge-outline text-white border-white/50">IA (Gemini)</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 bg-base-200">
+        <div class="max-w-7xl mx-auto px-4 md:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Funcionalidades <span class="gradient-text">Enterprise</span></h2>
+                <p class="text-base-content/70 max-w-2xl mx-auto">
+                    Tudo o que você precisa para criar sistemas de gestão em minutos.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% set features = [
+                    {'icon': '🎨', 'title': 'Editor Visual', 'desc': 'Monte formulários com drag-and-drop e preview em tempo real.'},
+                    {'icon': '🔐', 'title': 'Autenticação Hardened', 'desc': 'JWT revogável, 2FA, Rate Limit, CSRF e XSS Shield.'},
+                    {'icon': '📊', 'title': 'Dashboard', 'desc': 'KPIs em tempo real com Chart.js e alternância claro/escuro.'},
+                    {'icon': '🔌', 'title': 'API REST', 'desc': 'CRUD completo com OpenAPI, Swagger UI e JWT/Bearer.'},
+                    {'icon': '🏢', 'title': 'Multi-Tenant', 'desc': 'Isolamento por tenant, ideal para SaaS.'},
+                    {'icon': '🪝', 'title': 'Fila de Webhooks', 'desc': 'Retry com backoff exponencial e Dead Letter Queue.'},
+                    {'icon': '📝', 'title': 'Auditoria com Diff', 'desc': 'LGPD ready, registra old/new de cada alteração.'},
+                    {'icon': '🤖', 'title': 'AI Code Assist', 'desc': 'Google Gemini gera SQL CREATE TABLE em linguagem natural.'},
+                    {'icon': '🐳', 'title': 'Docker', 'desc': 'Deploy reproduzível com app + MariaDB.'},
+                    {'icon': '📤', 'title': 'Exportações', 'desc': 'CSV, XLSX e PDF prontos para usar.'},
+                    {'icon': '🌍', 'title': 'i18n', 'desc': 'Português, Inglês e Espanhol.'},
+                    {'icon': '🧪', 'title': '146 testes', 'desc': '126 legados + 20 PHPUnit, 100% verdes.'}
+                ] %}
+                {% for f in features %}
+                <div class="card bg-base-100 shadow-lg feature-card">
+                    <div class="card-body">
+                        <div class="text-4xl mb-2">{{ f.icon }}</div>
+                        <h3 class="card-title text-lg">{{ f.title }}</h3>
+                        <p class="text-sm text-base-content/70">{{ f.desc }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Stack Section -->
+    <section id="stack" class="py-24 bg-base-100">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Stack <span class="gradient-text">Tecnológica</span></h2>
+            <p class="text-base-content/70 max-w-2xl mx-auto mb-12">
+                Ferramentas modernas e comprovadas em produção.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                {% set stack = ['PHP 8.2', 'MariaDB 11', 'Docker', 'Twig 3', 'Tailwind CSS', 'DaisyUI 4', 'Chart.js', 'TinyMCE', 'Swagger UI', 'SortableJS', 'Alpine.js', 'Firebase JWT', 'PhpSpreadsheet', 'Dompdf', 'PHPUnit', 'GitHub Actions'] %}
+                {% for s in stack %}
+                <span class="badge badge-lg badge-outline">{{ s }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-24 bg-base-200">
+        <div class="max-w-7xl mx-auto px-4 md:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Planos <span class="gradient-text">Simples</span></h2>
+                <p class="text-base-content/70 max-w-2xl mx-auto">
+                    Comece grátis, escale quando precisar.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Free -->
+                <div class="card bg-base-100 shadow-lg">
+                    <div class="card-body">
+                        <h3 class="card-title text-2xl">Free</h3>
+                        <p class="text-4xl font-bold my-4">R$ 0</p>
+                        <ul class="space-y-2 text-sm">
+                            <li>✅ 1 tabela</li>
+                            <li>✅ CRUD básico</li>
+                            <li>✅ CSV</li>
+                            <li>✅ API REST</li>
+                        </ul>
+                        <a href="?action=install" class="btn btn-outline mt-4">Começar</a>
+                    </div>
+                </div>
+                <!-- Pro -->
+                <div class="card bg-primary text-primary-content shadow-2xl scale-105">
+                    <div class="card-body">
+                        <div class="badge badge-warning">Recomendado</div>
+                        <h3 class="card-title text-2xl">Pro</h3>
+                        <p class="text-4xl font-bold my-4">R$ 99<span class="text-lg">/mês</span></p>
+                        <ul class="space-y-2 text-sm">
+                            <li>✅ Tabelas ilimitadas</li>
+                            <li>✅ Editor Visual</li>
+                            <li>✅ Multi-Tenant</li>
+                            <li>✅ Fila de Webhooks</li>
+                            <li>✅ Auditoria com Diff</li>
+                            <li>✅ IA Gemini</li>
+                        </ul>
+                        <a href="?action=login" class="btn btn-warning text-black mt-4">Assinar</a>
+                    </div>
+                </div>
+                <!-- Enterprise -->
+                <div class="card bg-base-100 shadow-lg">
+                    <div class="card-body">
+                        <h3 class="card-title text-2xl">Enterprise</h3>
+                        <p class="text-4xl font-bold my-4">Sob consulta</p>
+                        <ul class="space-y-2 text-sm">
+                            <li>✅ Tudo do Pro</li>
+                            <li>✅ Suporte 24/7</li>
+                            <li>✅ SLA garantido</li>
+                            <li>✅ Deploy dedicado</li>
+                            <li>✅ Kubernetes</li>
+                        </ul>
+                        <a href="mailto:grupoconnecta@gmail.com" class="btn btn-primary mt-4">Contatar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 hero-bg text-white text-center">
+        <div class="max-w-4xl mx-auto px-4 md:px-8">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Pronto para criar seu sistema?</h2>
+            <p class="text-lg text-white/90 mb-8">
+                Instale em 1 clique e comece a gerar CRUDs em minutos.
+            </p>
+            <a href="?action=install" class="btn btn-lg btn-warning text-black font-bold">
+                🚀 Instalar Agora
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-base-300 py-12">
+        <div class="max-w-7xl mx-auto px-4 md:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold gradient-text mb-2">{{ app_name }}</h3>
+                    <p class="text-sm text-base-content/70">
+                        Gerador de CRUDs Enterprise.<br>
+                        Feito com PHP 8.2 e Docker.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Produto</h4>
+                    <ul class="space-y-1 text-sm text-base-content/70">
+                        <li><a href="#features" class="hover:text-primary">Features</a></li>
+                        <li><a href="#pricing" class="hover:text-primary">Preços</a></li>
+                        <li><a href="?action=api_docs" class="hover:text-primary">API Docs</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Recursos</h4>
+                    <ul class="space-y-1 text-sm text-base-content/70">
+                        <li><a href="https://github.com/djlupecr/phpgen" target="_blank" class="hover:text-primary">GitHub</a></li>
+                        <li><a href="https://github.com/djlupecr/phpgen/blob/main/PROJETO-PHPGEN.md" target="_blank" class="hover:text-primary">Documentação</a></li>
+                        <li><a href="https://github.com/djlupecr/phpgen/blob/main/CHANGELOG.md" target="_blank" class="hover:text-primary">Changelog</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Contato</h4>
+                    <ul class="space-y-1 text-sm text-base-content/70">
+                        <li>📧 grupoconnecta@gmail.com</li>
+                        <li>🐦 @djlupecr</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-base-200 mt-8 pt-6 text-center text-sm text-base-content/50">
+                &copy; {{ year }} {{ app_name }}. MIT License.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

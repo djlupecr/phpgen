@@ -5,6 +5,7 @@ class Router
 {
     private array $routes = [];
     private array $publicRoutes = [
+        'landing',          // ← NOVO
         'health', 'login', 'logout', 'logout_api',
         'openapi', 'api_docs', '2fa_verify', 'api',
     ];
@@ -28,7 +29,7 @@ class Router
                 exit;
             }
 
-            // Recarrega o usuário do banco (evita dados desatualizados)
+            // Recarrega o usuário do banco
             $db = new \PhpGen\Database\Introspector();
             $stmt = $db->pdo()->prepare("SELECT * FROM usuarios WHERE id = ? LIMIT 1");
             $stmt->execute([(int)$_SESSION['user']['id']]);

@@ -23,7 +23,8 @@ use PhpGen\Http\Controllers\{
     HealthController,
     WizardController,
     DesignerController,
-    TenantController
+    TenantController,
+    LandingController
 };
 
 use Twig\Environment;
@@ -97,6 +98,7 @@ if (empty($_SERVER['HTTP_AUTHORIZATION'])) {
 $router = new Router();
 
 // Rotas públicas
+$router->add('landing',         LandingController::class,    'index');
 $router->add('health',          HealthController::class,     'index');
 $router->add('login',           AuthController::class,       'login');
 $router->add('logout',          AuthController::class,       'logout');
@@ -151,5 +153,5 @@ $router->add('tenant_switch',     TenantController::class,        'switch');
 $router->add('designer',          DesignerController::class,      'index');
 $router->add('designer_save',     DesignerController::class,      'save');
 
-// Despacha a rota
-$router->dispatch($_GET['action'] ?? 'dashboard');
+// Despacha a rota (padrão: landing page pública)
+$router->dispatch($_GET['action'] ?? 'landing');
