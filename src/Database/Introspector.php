@@ -1,24 +1,35 @@
 <?php
-
 namespace PhpGen\Database;
 
 use PDO;
 use PhpGen\Config;
 use PhpGen\Validation\BrValidator;
+use PhpGen\Database\Drivers\DatabaseDriver;
+use PhpGen\Database\Drivers\MySQLDriver;
+use PhpGen\Database\Drivers\PostgreSQLDriver;
 
 class Introspector
 {
     private PDO $pdo;
+    private DatabaseDriver $driver;   // ← ESTA LINHA É OBRIGATÓRIA
 
     public function __construct(?PDO $pdo = null)
     {
         if ($pdo) {
             $this->pdo = $pdo;
-            return;
+        } else {
+            $cfg = Config::$db;
+            $driverType = $cfg['driver'] ?? 'mysql';
+            $dsn = $driverType === 'pgsql'
+                ? "pgsql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['database']}"
+                : "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['database']};charset={$cfg['charset']}";
+            $this->pdo = new PDO($dsn, $cfg['user'], $cfg['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         }
-        $cfg = Config::$db;
-        $dsn = "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['database']};charset={$cfg['charset']}";
-        $this->pdo = new PDO($dsn, $cfg['user'], $cfg['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+        $driverType = Config::$db['driver'] ?? 'mysql';
+        $this->driver = $driverType === 'pgsql'
+            ? new PostgreSQLDriver($this->pdo)
+            : new MySQLDriver($this->pdo);
     }
 
     public function pdo(): PDO
