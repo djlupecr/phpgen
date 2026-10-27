@@ -11,3 +11,11 @@ phpgen.rar
 .idea/
 .vscode/
 generated_backup_*
+
+# Arquivos temporários de teste/backup
+cookies.txt
+coverage.txt
+*.bkp
+public/index1.php
+regen.php
+tests/phpunit.xml
