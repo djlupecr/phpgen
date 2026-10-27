@@ -1,7 +1,0 @@
-{
-    "theme": "light",
-    "radius": "rounded-lg",
-    "webhook": "",
-    "field_order": "id,nome,preco,estoque,ativo,deleted_at",
-    "field_types": []
-}
