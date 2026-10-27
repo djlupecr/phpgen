@@ -6,6 +6,19 @@ use PhpGen\Database\Introspector;
 
 class ApiController
 {
+    /**
+     * Retorna o identificador devidamente quotado para o driver ativo.
+     * MySQL: `col`   |   PostgreSQL: "col"
+     */
+    private function q(Introspector $db, string $ident): string
+    {
+        $driver = $db->pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'pgsql') {
+            return '"' . str_replace('"', '""', $ident) . '"';
+        }
+        return '`' . str_replace('`', '``', $ident) . '`';
+    }
+
     public function openapi(): void
     {
         $f = __DIR__ . '/../../../public/openapi.json';
@@ -30,10 +43,16 @@ class ApiController
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         $apiUser = null;
 
+        // ------------------------------------------------------------
+        // 1. Autenticação (JWT Bearer ou sessão)
+        // ------------------------------------------------------------
         if ($authHeader && preg_match('/^Bearer\s+(.+)$/i', $authHeader, $m)) {
             $token = trim($m[1]);
             try {
-                $decoded = \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key(Config::$jwtSecret, 'HS256'));
+                $decoded = \Firebase\JWT\JWT::decode(
+                    $token,
+                    new \Firebase\JWT\Key(Config::$jwtSecret, 'HS256')
+                );
                 $dbCheck = new Introspector();
                 if (isset($decoded->jti) && $dbCheck->isTokenRevoked($decoded->jti)) {
                     http_response_code(401);
@@ -44,6 +63,7 @@ class ApiController
                 $stmtU->execute([$decoded->sub]);
                 $apiUser = $stmtU->fetch(\PDO::FETCH_ASSOC);
             } catch (\Throwable $e) {
+                // Fallback: tenta validar como API token (prefix + hash)
                 $prefix = substr($token, 0, 12);
                 $db0 = new Introspector();
                 $db0->ensureApiTokensTable();
@@ -66,40 +86,57 @@ class ApiController
             exit;
         }
 
+        // ------------------------------------------------------------
+        // 2. Validação de tabela e RBAC
+        // ------------------------------------------------------------
         $userId = (int)$apiUser['id'];
-        $table = $_GET['table'] ?? '';
-        $db = new Introspector();
-        try { $db->assertValidTable($table); } catch (\Throwable $e) {
+        $table  = $_GET['table'] ?? '';
+        $db     = new Introspector();
+
+        try {
+            $db->assertValidTable($table);
+        } catch (\Throwable $e) {
             http_response_code(404);
             echo json_encode(['status' => 'error', 'message' => 'Tabela inválida']);
             exit;
         }
 
         $method = $_SERVER['REQUEST_METHOD'];
-        $id = $_GET['id'] ?? null;
+        $id     = $_GET['id'] ?? null;
         $requiredPermission = match ($method) {
-            'GET' => 'SELECT', 'POST' => 'INSERT',
-            'PUT', 'PATCH' => 'UPDATE', 'DELETE' => 'DELETE',
-            default => null,
+            'GET'          => 'SELECT',
+            'POST'         => 'INSERT',
+            'PUT', 'PATCH' => 'UPDATE',
+            'DELETE'       => 'DELETE',
+            default        => null,
         };
+
         if ($requiredPermission && !$db->can($userId, $table, $requiredPermission)) {
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'Permissão negada']);
             exit;
         }
 
+        // ------------------------------------------------------------
+        // 3. Metadados da tabela
+        // ------------------------------------------------------------
         $schema = $db->tableSchema($table);
-        $pk = $db->primaryKey($schema) ?? 'id';
+        $pk     = $db->primaryKey($schema) ?? 'id';
+
         $body = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])
             ? (json_decode(file_get_contents('php://input'), true) ?: [])
             : [];
 
+        // ------------------------------------------------------------
+        // 4. Helpers de sanitização e webhook
+        // ------------------------------------------------------------
         $hashIfPassword = function ($col, $val) {
             $n = strtolower($col);
             return (str_contains($n, 'senha') || str_contains($n, 'password')) && !empty($val)
                 ? password_hash((string)$val, PASSWORD_DEFAULT)
                 : $val;
         };
+
         $sanitize = function ($input) use ($pk, $hashIfPassword) {
             $out = [];
             foreach ($input as $k => $v) {
@@ -115,7 +152,7 @@ class ApiController
             $url = json_decode(file_get_contents($cfgFile), true)['webhook'] ?? '';
             if (empty($url)) return;
 
-            $payload = json_encode(['action' => $actionName, 'table' => $table, 'id' => $recordId, 'time' => date('c')]);
+            $payload   = json_encode(['action' => $actionName, 'table' => $table, 'id' => $recordId, 'time' => date('c')]);
             $signature = hash_hmac('sha256', $payload, Config::$webhookSecret);
             $db->ensureWebhookLogsTable();
 
@@ -124,13 +161,13 @@ class ApiController
                 $attempt++;
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $payload,
-                    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Phpgen-Signature: ' . $signature],
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $payload,
+                    CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'X-Phpgen-Signature: ' . $signature],
                     CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT => 5,
+                    CURLOPT_TIMEOUT        => 5,
                 ]);
-                $response = curl_exec($ch);
+                $response   = curl_exec($ch);
                 $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
                 if ($statusCode >= 200 && $statusCode < 300) $success = true;
@@ -142,11 +179,17 @@ class ApiController
             } catch (\Throwable $e) {}
         };
 
+        // ------------------------------------------------------------
+        // 5. CRUD
+        // ------------------------------------------------------------
         try {
             switch ($method) {
                 case 'GET':
                     if ($id !== null) {
-                        $stmt = $db->pdo()->prepare("SELECT * FROM `$table` WHERE `$pk` = ? AND `deleted_at` IS NULL");
+                        $sql = "SELECT * FROM " . $this->q($db, $table)
+                             . " WHERE " . $this->q($db, $pk) . " = ?"
+                             . " AND " . $this->q($db, 'deleted_at') . " IS NULL";
+                        $stmt = $db->pdo()->prepare($sql);
                         $stmt->execute([$id]);
                         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
                         if (!$row) {
@@ -156,13 +199,23 @@ class ApiController
                         }
                         echo json_encode(['status' => 'success', 'data' => $row], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                     } else {
-                        $limit = min(100, max(1, (int)($_GET['limit'] ?? 25)));
-                        $page = max(1, (int)($_GET['page'] ?? 1));
+                        $limit  = min(100, max(1, (int)($_GET['limit'] ?? 25)));
+                        $page   = max(1, (int)($_GET['page'] ?? 1));
                         $offset = ($page - 1) * $limit;
-                        $total = (int)$db->pdo()->query("SELECT COUNT(*) FROM `$table` WHERE `deleted_at` IS NULL")->fetchColumn();
-                        $stmt = $db->pdo()->prepare("SELECT * FROM `$table` WHERE `deleted_at` IS NULL LIMIT $limit OFFSET $offset");
+
+                        $countSql = "SELECT COUNT(*) FROM " . $this->q($db, $table)
+                                  . " WHERE " . $this->q($db, 'deleted_at') . " IS NULL";
+                        $total = (int)$db->pdo()->query($countSql)->fetchColumn();
+
+                        $selectSql = "SELECT * FROM " . $this->q($db, $table)
+                                   . " WHERE " . $this->q($db, 'deleted_at') . " IS NULL"
+                                   . " LIMIT $limit OFFSET $offset";
+                        $stmt = $db->pdo()->prepare($selectSql);
                         $stmt->execute();
-                        echo json_encode(['status' => 'success', 'total' => $total, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        echo json_encode(
+                            ['status' => 'success', 'total' => $total, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)],
+                            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+                        );
                     }
                     break;
 
@@ -174,9 +227,10 @@ class ApiController
                         exit;
                     }
                     $cols = array_keys($data);
-                    $ph = implode(', ', array_fill(0, count($cols), '?'));
-                    $db->pdo()->prepare("INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES ($ph)")
-                       ->execute(array_values($data));
+                    $ph   = implode(', ', array_fill(0, count($cols), '?'));
+                    $quotedCols = implode(', ', array_map(fn($c) => $this->q($db, $c), $cols));
+                    $sql = "INSERT INTO " . $this->q($db, $table) . " ($quotedCols) VALUES ($ph)";
+                    $db->pdo()->prepare($sql)->execute(array_values($data));
                     $newId = $db->pdo()->lastInsertId();
                     $db->log($userId, 'CREATE', $table, (int)$newId);
                     $fireWebhook('CREATE', (int)$newId);
@@ -184,7 +238,8 @@ class ApiController
                     echo json_encode(['status' => 'success', 'id' => $newId]);
                     break;
 
-                case 'PUT': case 'PATCH':
+                case 'PUT':
+                case 'PATCH':
                     if (!$id) {
                         http_response_code(400);
                         echo json_encode(['status' => 'error', 'message' => 'Informe o ID']);
@@ -192,9 +247,15 @@ class ApiController
                     }
                     $data = $sanitize($body);
                     $sets = []; $params = [];
-                    foreach ($data as $k => $v) { $sets[] = "`$k` = ?"; $params[] = $v; }
+                    foreach ($data as $k => $v) {
+                        $sets[]   = $this->q($db, $k) . " = ?";
+                        $params[] = $v;
+                    }
                     $params[] = $id;
-                    $db->pdo()->prepare("UPDATE `$table` SET " . implode(', ', $sets) . " WHERE `$pk` = ?")->execute($params);
+                    $sql = "UPDATE " . $this->q($db, $table)
+                         . " SET " . implode(', ', $sets)
+                         . " WHERE " . $this->q($db, $pk) . " = ?";
+                    $db->pdo()->prepare($sql)->execute($params);
                     $db->log($userId, 'UPDATE', $table, (int)$id);
                     $fireWebhook('UPDATE', (int)$id);
                     echo json_encode(['status' => 'success', 'id' => $id]);
@@ -206,7 +267,10 @@ class ApiController
                         echo json_encode(['status' => 'error', 'message' => 'Informe o ID']);
                         exit;
                     }
-                    $db->pdo()->prepare("UPDATE `$table` SET `deleted_at` = NOW() WHERE `$pk` = ?")->execute([$id]);
+                    $sql = "UPDATE " . $this->q($db, $table)
+                         . " SET " . $this->q($db, 'deleted_at') . " = NOW()"
+                         . " WHERE " . $this->q($db, $pk) . " = ?";
+                    $db->pdo()->prepare($sql)->execute([$id]);
                     $db->log($userId, 'DELETE', $table, (int)$id);
                     $fireWebhook('DELETE', (int)$id);
                     echo json_encode(['status' => 'success', 'id' => $id]);
@@ -218,8 +282,12 @@ class ApiController
             }
         } catch (\Throwable $e) {
             http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => 'Erro interno']);
-            error_log($e->getMessage());
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Erro interno',
+                'detail'  => $e->getMessage(),   // ajuda no diagnóstico; remover em produção
+            ]);
+            error_log('ApiController: ' . $e->getMessage());
         }
         exit;
     }
