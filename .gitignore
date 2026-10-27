@@ -19,3 +19,11 @@ coverage.txt
 public/index1.php
 regen.php
 tests/phpunit.xml
+
+# Arquivos temporários
+cookies.txt
+coverage.txt
+*.bkp
+public/index1.php
+regen.php
+tests/phpunit.xml
