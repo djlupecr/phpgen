@@ -1,0 +1,79 @@
+{% extends "layout.twig" %}
+{% set title = "Criar Tabela" %}
+{% set step = 3 %}
+{% block content %}
+<div class="card">
+    <h2>Criar Nova Tabela</h2>
+    <p>Defina a estrutura da sua nova tabela. O campo `id` é criado automaticamente.</p>
+    
+    <form method="post" action="?action=create_table">
+        <div class="form-group">
+            <label>Nome da Tabela (ex: produtos, clientes):</label>
+            <input type="text" name="table_name" required placeholder="clientes" class="form-control" style="max-width: 300px;">
+        </div>
+
+        <h3 style="margin-top: 1.5rem;">Campos</h3>
+        <table style="width:100%; font-size: 0.9em;" id="tabela-campos">
+            <thead>
+                <tr>
+                    <th>Nome do Campo</th>
+                    <th>Tipo</th>
+                    <th>Permitir Nulo?</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" name="fields[0][name]" placeholder="nome" required style="width:100%;"></td>
+                    <td>
+                        <select name="fields[0][type]" style="width:100%;">
+                            <option value="VARCHAR(255)">Texto (VARCHAR)</option>
+                            <option value="INT">Número Inteiro</option>
+                            <option value="DECIMAL(10,2)">Moeda/Decimal</option>
+                            <option value="TEXT">Texto Longo</option>
+                            <option value="DATE">Data</option>
+                            <option value="DATETIME">Data e Hora</option>
+                            <option value="TINYINT(1)">Booleano (Sim/Não)</option>
+                        </select>
+                    </td>
+                    <td style="text-align:center;"><input type="checkbox" name="fields[0][null]"></td>
+                    <td><button type="button" onclick="this.closest('tr').remove()" style="color:red; background:none; border:none; cursor:pointer;">X</button></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <button type="button" onclick="adicionarCampo()" class="btn btn-secondary" style="margin-top:1rem; font-size:.9rem;">+ Adicionar Campo</button>
+
+        <div class="form-actions" style="margin-top: 2rem;">
+            <a href="?action=tables" class="btn btn-secondary">← Voltar</a>
+            <button type="submit" class="btn btn-success">Criar Tabela</button>
+        </div>
+    </form>
+</div>
+
+<script>
+let contador = 1;
+function adicionarCampo() {
+    const tbody = document.querySelector('#tabela-campos tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" name="fields[${contador}][name]" placeholder="ex: email" required style="width:100%;"></td>
+        <td>
+            <select name="fields[${contador}][type]" style="width:100%;">
+                <option value="VARCHAR(255)">Texto (VARCHAR)</option>
+                <option value="INT">Número Inteiro</option>
+                <option value="DECIMAL(10,2)">Moeda/Decimal</option>
+                <option value="TEXT">Texto Longo</option>
+                <option value="DATE">Data</option>
+                <option value="DATETIME">Data e Hora</option>
+                <option value="TINYINT(1)">Booleano (Sim/Não)</option>
+            </select>
+        </td>
+        <td style="text-align:center;"><input type="checkbox" name="fields[${contador}][null]"></td>
+        <td><button type="button" onclick="this.closest('tr').remove()" style="color:red; background:none; border:none; cursor:pointer;">X</button></td>
+    `;
+    tbody.appendChild(tr);
+    contador++;
+}
+</script>
+{% endblock %}

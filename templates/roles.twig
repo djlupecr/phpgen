@@ -1,0 +1,133 @@
+{% extends "layout.twig" %}
+{% set title = "Papéis e Permissões" %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl rounded-2xl w-full">
+    <div class="card-body p-6 md:p-10">
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h2 class="card-title text-primary text-3xl">👥 Papéis e Permissões</h2>
+                <p class="text-base-content/70 mt-1">
+                    Gerencie os papéis dos usuários. Apenas administradores podem acessar esta tela.
+                </p>
+            </div>
+        </div>
+
+        {% if flash_success %}
+            <div class="alert alert-success mb-6"><span>{{ flash_success }}</span></div>
+        {% endif %}
+        {% if flash_error %}
+            <div class="alert alert-error mb-6"><span>{{ flash_error }}</span></div>
+        {% endif %}
+
+        <!-- Resumo dos papéis disponíveis -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-base-200 p-4 rounded-lg border-l-4 border-error">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-error text-white">admin</span>
+                    <strong>Administrador</strong>
+                </div>
+                <p class="text-xs text-base-content/70">Acesso total (SELECT, INSERT, UPDATE, DELETE)</p>
+            </div>
+            <div class="bg-base-200 p-4 rounded-lg border-l-4 border-info">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-info text-white">editor</span>
+                    <strong>Editor</strong>
+                </div>
+                <p class="text-xs text-base-content/70">Pode criar e editar, mas não excluir</p>
+            </div>
+            <div class="bg-base-200 p-4 rounded-lg border-l-4 border-success">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-success text-white">viewer</span>
+                    <strong>Visualizador</strong>
+                </div>
+                <p class="text-xs text-base-content/70">Apenas leitura (SELECT)</p>
+            </div>
+        </div>
+
+        <!-- Tabela de usuários -->
+        <div class="overflow-x-auto bg-base-100 rounded-lg border border-base-300">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-base-200 text-base-content">
+                        <th class="w-16">#</th>
+                        <th>Usuário</th>
+                        <th>E-mail</th>
+                        <th>Papéis Atuais</th>
+                        <th class="text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                        {% set papeis = papeisPorUsuario[u.id] ?? [] %}
+                        <tr class="hover">
+                            <td class="text-sm text-base-content/60">{{ u.id }}</td>
+                            <td class="font-medium">{{ u.nome }}</td>
+                            <td class="text-sm">{{ u.email }}</td>
+                            <td>
+                                {% if papeis is empty %}
+                                    <span class="text-xs text-base-content/40 italic">Nenhum papel atribuído</span>
+                                {% else %}
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for p in papeis %}
+                                            {% if p == 'admin' %}
+                                                <span class="badge badge-error text-white">admin</span>
+                                            {% elseif p == 'editor' %}
+                                                <span class="badge badge-info text-white">editor</span>
+                                            {% elseif p == 'viewer' %}
+                                                <span class="badge badge-success text-white">viewer</span>
+                                            {% else %}
+                                                <span class="badge">{{ p }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="flex flex-wrap gap-1 justify-end">
+                                    {% for r in roles %}
+                                        {% if r.slug not in papeis %}
+                                            <form method="post" action="?action=role_assign" class="inline">
+                                                <input type="hidden" name="_csrf" value="{{ csrf }}">
+                                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                                <input type="hidden" name="role" value="{{ r.slug }}">
+                                                <button type="submit" class="btn btn-xs btn-outline"
+                                                        title="Adicionar papel: {{ r.name }}">
+                                                    + {{ r.slug }}
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <a href="?action=role_remove&user_id={{ u.id }}&role={{ r.slug }}"
+                                               onclick="return confirm('Remover papel {{ r.slug }} de {{ u.nome }}?')"
+                                               class="btn btn-xs btn-ghost text-error"
+                                               title="Remover papel: {{ r.name }}">
+                                                − {{ r.slug }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-10 text-base-content/50">
+                                Nenhum usuário cadastrado.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="divider my-8">Como funciona</div>
+        <div class="bg-base-200 p-6 rounded-xl text-sm space-y-2">
+            <p><strong>🔑 admin:</strong> acesso total — pode criar, editar e excluir em qualquer tabela, e gerenciar usuários/papéis.</p>
+            <p><strong>✏️ editor:</strong> pode criar e editar registros, mas <strong>não</strong> pode excluir.</p>
+            <p><strong>👁️ viewer:</strong> apenas leitura. Ideal para relatórios e consultas.</p>
+            <p class="text-xs text-base-content/60 mt-3">
+                ⚠️ Um usuário pode ter múltiplos papéis. A permissão efetiva é a <strong>união</strong> de todos os papéis.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

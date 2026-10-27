@@ -1,0 +1,21 @@
+{% extends "layout.twig" %}
+{% set title = "Pronto" %}
+{% set step = 5 %}
+{% block content %}
+<div class="card">
+    <h2>✅ Código gerado com sucesso!</h2>
+    <p>Arquivos criados para a tabela <code>{{ table }}</code>:</p>
+    <ul>
+        {% for f in files %}
+        <li><code>{{ f }}</code></li>
+        {% endfor %}
+    </ul>
+    <p>Páginas geradas: 
+        {% for p in pages %}<strong>{{ p }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}
+    </p>
+    <div class="form-actions">
+        <a href="?action=tables" class="btn btn-secondary">← Gerar outro</a>
+        <a href="?action=welcome" class="btn btn-primary">Novo projeto</a>
+    </div>
+</div>
+{% endblock %}

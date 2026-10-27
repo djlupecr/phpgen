@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang|replace({'_': '-'}) }}" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>phpgen - {{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; }
+        .steps { display: flex; gap: 0.5rem; margin: 1rem 0 2rem; overflow-x: auto; }
+        .step { flex: 1; min-width: 100px; padding: 0.5rem; text-align: center; border-bottom: 3px solid #e5e7eb; color: #6b7280; font-size: 0.9rem; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
+        .step.clickable { cursor: pointer; }
+        .step.clickable:hover { color: #1e40af; border-bottom-color: #93c5fd; background: #f3f4f6; border-radius: 4px 4px 0 0; }
+        .step.active { border-bottom-color: #2563eb; color: #1e40af; font-weight: 600; cursor: default; }
+        .step.done { border-bottom-color: #16a34a; color: #16a34a; }
+    </style>
+    <!-- [FIX #20] Token CSRF global injetado pelo servidor -->
+    <script>window.CSRF_TOKEN = "{{ csrf_token|default('') }}";</script>
+</head>
+<body class="bg-base-200 text-base-content min-h-screen flex flex-col">
+
+    <!-- Header Responsivo -->
+    <header class="bg-base-100 shadow-sm border-b border-base-300">
+        <div class="w-full max-w-screen-2xl mx-auto px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Logo e Nome -->
+            <div class="flex items-center gap-4">
+                <a href="?action=dashboard" class="text-2xl font-bold text-primary">{{ 'app_name'|trans }}</a>
+                <span class="text-sm text-base-content/50 hidden md:inline">{{ 'app_desc'|trans }}</span>
+            </div>
+
+            {% if session_user %}
+            <!-- Menu Principal -->
+            <nav class="flex items-center gap-2 order-3 md:order-2 w-full md:w-auto overflow-x-auto">
+                <a href="?action=dashboard" class="btn btn-ghost btn-sm whitespace-nowrap">{{ 'menu.dashboard'|trans }}</a>
+                <a href="?action=tables" class="btn btn-ghost btn-sm whitespace-nowrap">{{ 'menu.tables'|trans }}</a>
+                <a href="?action=audit" class="btn btn-ghost btn-sm whitespace-nowrap">🔍 {{ 'menu.audit'|trans }}</a>
+                <a href="?action=tokens" class="btn btn-ghost btn-sm whitespace-nowrap">🔑 {{ 'menu.tokens'|trans }}</a>
+                {% if is_admin|default(false) %}
+                    <a href="?action=roles" class="btn btn-ghost btn-sm whitespace-nowrap">👥 {{ 'menu.roles'|trans }}</a>
+                    <a href="?action=webhook_logs" class="btn btn-ghost btn-sm whitespace-nowrap">🪝 Webhooks</a>
+                    <a href="?action=backup" class="btn btn-ghost btn-sm whitespace-nowrap">💾 Backup</a>
+                    <a href="?action=ai" class="btn btn-ghost btn-sm whitespace-nowrap">🤖 AI Assist</a>
+                {% endif %}
+            </nav>
+
+            <!-- Usuário, Idioma, Notificações e Logout -->
+            <div class="flex items-center gap-3 order-2 md:order-3 ml-auto">
+                <!-- Seletor de Idioma -->
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-sm">
+                        🌐 {{ current_lang|split('_')[0]|upper }}
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32">
+                        {% for code, label in available_langs %}
+                            <li><a href="?lang={{ code }}" class="{% if code == current_lang %}font-bold text-primary{% endif %}">{{ label }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- [FIX #64] Sino de Notificações -->
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-circle btn-sm">
+                        <div class="indicator">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                            <span id="notif-badge" class="badge badge-xs badge-primary indicator-item hidden"></span>
+                        </div>
+                    </label>
+                    <ul tabindex="0" id="notif-list" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-80">
+                        <li class="menu-title text-center">Nenhuma notificação.</li>
+                    </ul>
+                </div>
+
+                <!-- Menu do Usuário -->
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-sm gap-2">
+                        <span class="hidden sm:inline font-semibold truncate max-w-[150px]">{{ session_user.nome }}</span>
+                        <div class="avatar placeholder">
+                            <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                <span class="text-sm">{{ session_user.nome|slice(0, 1)|upper }}</span>
+                            </div>
+                        </div>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li><a href="?action=2fa_setup">🔐 Segurança (2FA)</a></li>
+                        <li><a href="?action=logout" class="text-error">🚪 {{ 'menu.logout'|trans }}</a></li>
+                    </ul>
+                </div>
+
+                <button onclick="toggleTheme()" class="btn btn-ghost btn-circle btn-sm text-lg" title="{{ 'menu.theme'|trans }}">🌙</button>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal (Ocupa a tela toda) -->
+    <main class="flex-1 w-full max-w-screen-2xl mx-auto p-4 md:p-8">
+        
+        {% if title != "Bem-vindo" and title != "Conexão" and title != "Dashboard" and title != "Tabelas" and title != "API Tokens" and title != "Auditoria" and title != "Papéis e Permissões" and title != "AI Code Assist" and title != "Backup e Restauração" %}
+        <div class="steps">
+            {# Passo 1 #}
+            {% if step > 1 %}
+                <a href="?action=welcome" class="step done clickable">1. {{ 'wizard.step1'|trans }}</a>
+            {% else %}
+                <div class="step active">1. {{ 'wizard.step1'|trans }}</div>
+            {% endif %}
+            {# Passo 2 #}
+            {% if step > 2 %}
+                <a href="?action=connect" class="step done clickable">2. {{ 'wizard.step2'|trans }}</a>
+            {% elseif step == 2 %}
+                <div class="step active">2. {{ 'wizard.step2'|trans }}</div>
+            {% else %}
+                <a href="?action=connect" class="step clickable">2. {{ 'wizard.step2'|trans }}</a>
+            {% endif %}
+            {# Passo 3 #}
+            {% if step > 3 %}
+                <a href="?action=tables" class="step done clickable">3. {{ 'wizard.step3'|trans }}</a>
+            {% elseif step == 3 %}
+                <div class="step active">3. {{ 'wizard.step3'|trans }}</div>
+            {% else %}
+                <a href="?action=tables" class="step clickable">3. {{ 'wizard.step3'|trans }}</a>
+            {% endif %}
+            {# Passo 4 #}
+            {% set hasTable = table is defined and table is not empty %}
+            {% if step > 4 %}
+                {% if hasTable %}
+                    <a href="?action=configure&table={{ table }}" class="step done clickable">4. {{ 'wizard.step4'|trans }}</a>
+                {% else %}
+                    <div class="step done">4. {{ 'wizard.step4'|trans }}</div>
+                {% endif %}
+            {% elseif step == 4 %}
+                <div class="step active">4. {{ 'wizard.step4'|trans }}</div>
+            {% else %}
+                {% if hasTable %}
+                    <a href="?action=configure&table={{ table }}" class="step clickable">4. {{ 'wizard.step4'|trans }}</a>
+                {% else %}
+                    <div class="step">4. {{ 'wizard.step4'|trans }}</div>
+                {% endif %}
+            {% endif %}
+            {# Passo 5 #}
+            {% if step > 5 %}
+                {% if hasTable %}
+                    <a href="?action=appearance&table={{ table }}" class="step done clickable">5. {{ 'wizard.step5'|trans }}</a>
+                {% else %}
+                    <div class="step done">5. {{ 'wizard.step5'|trans }}</div>
+                {% endif %}
+            {% elseif step == 5 %}
+                <div class="step active">5. {{ 'wizard.step5'|trans }}</div>
+            {% else %}
+                {% if hasTable and step > 4 %}
+                    <a href="?action=appearance&table={{ table }}" class="step clickable">5. {{ 'wizard.step5'|trans }}</a>
+                {% else %}
+                    <div class="step">5. {{ 'wizard.step5'|trans }}</div>
+                {% endif %}
+            {% endif %}
+            {# Passo 6 #}
+            {% if step >= 6 %}
+                {% if hasTable %}
+                    <a href="?action=relationships&table={{ table }}" class="step active">6. {{ 'wizard.step6'|trans }}</a>
+                {% else %}
+                    <div class="step active">6. {{ 'wizard.step6'|trans }}</div>
+                {% endif %}
+            {% else %}
+                {% if hasTable and step > 5 %}
+                    <a href="?action=relationships&table={{ table }}" class="step clickable">6. {{ 'wizard.step6'|trans }}</a>
+                {% else %}
+                    <div class="step">6. {{ 'wizard.step6'|trans }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+
+        // ============================================================
+        // [FIX #64] Polling de Notificações
+        // ============================================================
+        function loadNotifications() {
+            fetch('?action=notifications_list')
+                .then(r => r.json())
+                .then(data => {
+                    const badge = document.getElementById('notif-badge');
+                    const list = document.getElementById('notif-list');
+                    if (!badge || !list) return;
+
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.classList.remove('hidden');
+
+                        list.innerHTML = '';
+                        data.data.forEach(n => {
+                            const li = document.createElement('li');
+                            // [FIX] Escapa HTML das notificações para evitar XSS
+                            const safeTitle = document.createElement('span');
+                            safeTitle.className = 'font-bold';
+                            safeTitle.textContent = n.title;
+                            const safeMsg = document.createElement('span');
+                            safeMsg.className = 'text-xs text-base-content/70';
+                            safeMsg.textContent = n.message;
+
+                            const a = document.createElement('a');
+                            a.className = 'flex flex-col items-start';
+                            a.addEventListener('click', () => markAsRead(n.id));
+                            a.appendChild(safeTitle);
+                            a.appendChild(safeMsg);
+                            li.appendChild(a);
+                            list.appendChild(li);
+                        });
+                    } else {
+                        badge.classList.add('hidden');
+                        list.innerHTML = '<li class="menu-title text-center">Nenhuma notificação.</li>';
+                    }
+                })
+                .catch(() => { /* silencia erros de rede no polling */ });
+        }
+
+        // [FIX #17] Envia CSRF token junto (o backend exige via csrfCheck)
+        function markAsRead(id) {
+            const csrf = (window.CSRF_TOKEN || '');
+            fetch('?action=notification_read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id: id, _csrf: csrf })
+            }).then(() => loadNotifications());
+        }
+
+        // Só carrega se o usuário estiver logado (o elemento existe)
+        if (document.getElementById('notif-badge')) {
+            setInterval(loadNotifications, 30000); // 30 segundos
+            loadNotifications();
+        }
+    </script>
+</body>
+</html>

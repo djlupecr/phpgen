@@ -1,0 +1,50 @@
+<?php
+return [
+    'app_name' => 'phpgen',
+    'app_desc' => 'Gerador de CRUDs PHP',
+    'menu' => [
+        'dashboard' => 'Dashboard',
+        'tables' => 'Tabelas',
+        'audit' => 'Auditoria',
+        'tokens' => 'Tokens',
+        'roles' => 'Papéis',
+        'logout' => 'Sair',
+        'theme' => 'Alternar Tema',
+    ],
+    'auth' => [
+        'login_title' => 'Acessar phpgen',
+        'email' => 'E-mail',
+        'password' => 'Senha',
+        'enter' => 'Entrar',
+        'error' => 'E-mail ou senha inválidos.',
+        'rate_limit' => 'Muitas tentativas. Aguarde alguns minutos.',
+    ],
+    'crud' => [
+        'add' => 'Adicionar',
+        'edit' => 'Editar',
+        'delete' => 'Excluir',
+        'view' => 'Ver',
+        'save' => 'Salvar',
+        'back' => 'Voltar',
+        'search' => 'Pesquisar...',
+        'confirm_delete' => 'Tem certeza que deseja excluir?',
+        'no_records' => 'Nenhum registro encontrado.',
+        'export_csv' => 'Exportar CSV',
+        'generate_fake' => 'Gerar Dados',
+    ],
+    'wizard' => [
+        'step1' => 'Banco',
+        'step2' => 'Conexão',
+        'step3' => 'Tabela',
+        'step4' => 'Páginas',
+        'step5' => 'Aparência',
+        'step6' => 'Relacionamentos',
+        'next' => 'Próximo',
+        'finish' => 'Finalizar',
+    ],
+    'messages' => [
+        'success' => 'Operação realizada com sucesso!',
+        'error' => 'Ocorreu um erro.',
+        'permission_denied' => 'Permissão negada.',
+    ]
+];

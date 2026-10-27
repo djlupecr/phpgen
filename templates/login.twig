@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang|replace({'_': '-'})|default('pt-BR') }}" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ 'app_name'|trans|default('phpgen') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    {# [FIX #58] Cloudflare Turnstile (se a chave estiver configurada) #}
+    {% if turnstile_site_key %}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
+</head>
+<body class="bg-base-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="card bg-base-100 shadow-xl w-full max-w-sm">
+        <div class="card-body">
+            <div class="flex justify-center mb-4">
+                <h2 class="card-title text-primary text-3xl font-bold">{{ 'app_name'|trans|default('phpgen') }}</h2>
+            </div>
+            <p class="text-center text-sm text-base-content/70 mb-6">{{ 'auth.login_title'|trans|default('Acesse sua conta') }}</p>
+
+            {# Exibe mensagem de sucesso caso venha do instalador #}
+            {% if install_success %}
+                <div class="alert alert-success mb-4 text-sm">
+                    <span>{{ install_success }}</span>
+                </div>
+            {% endif %}
+
+            {# Exibe erros de login, captcha ou rate limit #}
+            {% if erro %}
+                <div class="alert alert-error mb-4 text-sm">
+                    <span>{{ erro }}</span>
+                </div>
+            {% endif %}
+
+            <form method="post" action="?action=login">
+                <div class="form-control w-full mb-2">
+                    <label class="label">
+                        <span class="label-text font-semibold">{{ 'auth.email'|trans|default('E-mail') }}</span>
+                    </label>
+                    <input type="email" name="email" required class="input input-bordered w-full" placeholder="admin@teste.com" autofocus>
+                </div>
+                
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">{{ 'auth.password'|trans|default('Senha') }}</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" name="senha" id="senha-input" required class="input input-bordered w-full pr-10" placeholder="••••••••">
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                {# Widget do Cloudflare Turnstile #}
+                {% if turnstile_site_key %}
+                    <div class="cf-turnstile mb-6 flex justify-center" data-sitekey="{{ turnstile_site_key }}"></div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary w-full text-lg">{{ 'auth.enter'|trans|default('Entrar') }}</button>
+            </form>
+
+            <div class="divider text-xs text-base-content/50 mt-6">{{ 'auth.or'|trans|default('ou') }}</div>
+            
+            <div class="text-center">
+                <a href="install.php" class="link link-hover text-sm text-base-content/70">
+                    Instalar o sistema
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('senha-input');
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+
+        // [FIX #54] Alternância de Tema na tela de Login
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+    </script>
+</body>
+</html>

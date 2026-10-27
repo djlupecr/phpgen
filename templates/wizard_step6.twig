@@ -1,0 +1,227 @@
+{% extends "layout.twig" %}
+{% set title = "Relacionamentos" %}
+{% set step = 6 %}
+{% block content %}
+<style>
+    .rel-canvas {
+        position: relative;
+        background: #f8fafc;
+        background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+        background-size: 20px 20px;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        min-height: 400px;
+        overflow: hidden;
+    }
+    .rel-node {
+        position: absolute;
+        background: white;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 10px;
+        width: 200px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+    .rel-node.pai { border-color: #10b981; top: 50px; left: 50px; }
+    .rel-node.filha { border-color: #6366f1; }
+    .rel-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+    .rel-line { stroke: #94a3b8; stroke-width: 3px; fill: none; }
+    .rel-label { font-size: 10px; fill: #475569; font-weight: bold; background: white; }
+</style>
+
+<div class="card">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2>Construtor de Relacionamentos</h2>
+            <p class="text-gray-600">Arraste as tabelas para organizar e clique em "Conectar" para ligá-las.</p>
+        </div>
+    </div>
+
+    <!-- Barra de Ferramentas -->
+    <div class="bg-base-200 p-4 rounded-lg mb-4 flex gap-4 items-center">
+        <div class="flex-1">
+            <label class="text-sm font-bold text-gray-700">Tabela Filha:</label>
+            <select id="select-filha" class="select select-bordered select-sm w-full max-w-xs">
+                <option value="">Selecione uma tabela...</option>
+                {% for t in all_tables %}
+                    {% if t != table and t != 'audit_logs' %}
+                        <option value="{{ t }}">{{ t }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-1">
+            <label class="text-sm font-bold text-gray-700">Chave Estrangeira (FK):</label>
+            <select id="select-fk" class="select select-bordered select-sm w-full max-w-xs" disabled>
+                <option value="">Selecione a tabela primeiro...</option>
+            </select>
+        </div>
+        <button type="button" onclick="adicionarRelacionamento()" class="btn btn-primary btn-sm mt-6">
+            + Adicionar Conexão
+        </button>
+    </div>
+
+    <!-- Canvas Visual -->
+    <div class="rel-canvas" id="canvas">
+        <div class="rel-node pai" id="node-pai">
+            <div class="text-xs font-bold text-green-600 mb-2">TABELA PAI (Principal)</div>
+            <div class="font-bold text-lg text-gray-800">{{ table }}</div>
+            <div class="text-xs text-gray-500 mt-1">PK: id</div>
+        </div>
+        <svg class="rel-svg" id="svg-canvas"></svg>
+    </div>
+
+    <div id="lista-relacionamentos" class="mt-4"></div>
+
+    <form method="post" action="?action=generate" id="form-relacionamentos">
+        <!-- [FIX #34] repassa TODOS os campos do passo 5, inclusive field_order -->
+        {% for key, value in formData %}
+            {% if key == 'pages' %}
+                {% for p in value %}<input type="hidden" name="pages[]" value="{{ p }}">{% endfor %}
+            {% elseif key == 'labels' or key == 'show_in_grid' or key == 'show_in_form' or key == 'required_field' or key == 'field_types' or key == 'field_masks' %}
+                {% for subkey, subvalue in value %}<input type="hidden" name="{{ key }}[{{ subkey }}]" value="{{ subvalue }}">{% endfor %}
+            {% elseif key == 'relacionamentos_json' %}
+                {# ignora — o JS preenche logo abaixo #}
+            {% else %}
+                {# field_order, table, theme, border_radius, border_width, form_layout, webhook_url caem aqui #}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+
+        <input type="hidden" name="relacionamentos_json" id="input-relacionamentos-json" value="[]">
+
+        <div class="form-actions mt-8">
+            <button type="button" onclick="voltarPasso5()" class="btn btn-secondary">← Voltar</button>
+            <button type="submit" class="btn btn-success" onclick="prepararEnvio()">Finalizar e Gerar Código</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const todasFKs  = {{ fksJson|raw }};
+    const tabelaPai = "{{ table }}";
+    let relacionamentos = [];
+    let yOffset = 50;
+
+    document.getElementById('select-filha').addEventListener('change', function() {
+        const filha = this.value;
+        const selectFk = document.getElementById('select-fk');
+
+        selectFk.innerHTML = '<option value="">Selecione a FK...</option>';
+        selectFk.disabled = true;
+
+        if (filha && todasFKs[filha]) {
+            todasFKs[filha].forEach(fk => {
+                const opt = document.createElement('option');
+                opt.value = fk.column;
+                opt.textContent = fk.column + " (aponta para " + fk.ref_table + ")";
+                selectFk.appendChild(opt);
+            });
+            selectFk.disabled = false;
+        }
+    });
+
+    function adicionarRelacionamento() {
+        const filha = document.getElementById('select-filha').value;
+        const fk = document.getElementById('select-fk').value;
+
+        if (!filha || !fk) {
+            alert("Por favor, selecione a tabela filha e a chave estrangeira.");
+            return;
+        }
+        if (relacionamentos.some(r => r.filha === filha)) {
+            alert("Essa tabela já está conectada.");
+            return;
+        }
+
+        relacionamentos.push({ filha, fk, id: Date.now() });
+        desenharRelacionamentos();
+
+        document.getElementById('select-filha').value = '';
+        document.getElementById('select-fk').innerHTML = '<option value="">Selecione a tabela primeiro...</option>';
+        document.getElementById('select-fk').disabled = true;
+    }
+
+    function desenharRelacionamentos() {
+        const svg = document.getElementById('svg-canvas');
+        const canvas = document.getElementById('canvas');
+
+        svg.innerHTML = '';
+        document.querySelectorAll('.rel-node.filha').forEach(n => n.remove());
+
+        yOffset = 50;
+
+        relacionamentos.forEach((rel) => {
+            const node = document.createElement('div');
+            node.className = 'rel-node filha';
+            node.style.top = yOffset + 'px';
+            node.style.right = '50px';
+            node.innerHTML = `
+                <div class="text-xs font-bold text-indigo-600 mb-2">TABELA FILHA</div>
+                <div class="font-bold text-lg text-gray-800">${rel.filha}</div>
+                <div class="text-xs text-gray-500 mt-1">FK: ${rel.fk}</div>
+                <button type="button" onclick="removerRelacionamento(${rel.id})" class="absolute top-1 right-1 text-red-500 hover:text-red-700 font-bold text-xs">✕</button>
+            `;
+            canvas.appendChild(node);
+
+            const paiRect    = document.getElementById('node-pai').getBoundingClientRect();
+            const nodeRect   = node.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+
+            const x1 = paiRect.right - canvasRect.left;
+            const y1 = paiRect.top + (paiRect.height / 2) - canvasRect.top;
+            const x2 = nodeRect.left - canvasRect.left;
+            const y2 = nodeRect.top + (nodeRect.height / 2) - canvasRect.top;
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", `M ${x1} ${y1} C ${x1 + 100} ${y1}, ${x2 - 100} ${y2}, ${x2} ${y2}`);
+            path.setAttribute("class", "rel-line");
+
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", (x1 + x2) / 2);
+            text.setAttribute("y", (y1 + y2) / 2 - 5);
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("class", "rel-label");
+            text.textContent = rel.fk;
+
+            svg.appendChild(path);
+            svg.appendChild(text);
+
+            yOffset += 150;
+        });
+
+        canvas.style.minHeight = (yOffset > 400 ? yOffset + 50 : 400) + 'px';
+        atualizarListaTexto();
+    }
+
+    function removerRelacionamento(id) {
+        relacionamentos = relacionamentos.filter(r => r.id !== id);
+        desenharRelacionamentos();
+    }
+
+    function atualizarListaTexto() {
+        const div = document.getElementById('lista-relacionamentos');
+        if (relacionamentos.length === 0) { div.innerHTML = ''; return; }
+        div.innerHTML = '<h4 class="font-bold text-sm text-gray-600 mb-2">Conexões estabelecidas:</h4>' +
+            relacionamentos.map(r => `<div class="text-xs bg-gray-100 p-2 rounded mb-1">🔗 <strong>${r.filha}</strong> conectada via <strong>${r.fk}</strong></div>`).join('');
+    }
+
+    function prepararEnvio() {
+        document.getElementById('input-relacionamentos-json').value = JSON.stringify(relacionamentos);
+    }
+
+    // [FIX #34b] "Voltar" preserva o estado do passo 5 via POST
+    function voltarPasso5() {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '?action=appearance';
+        document.querySelectorAll('#form-relacionamentos input[type=hidden]').forEach(inp => {
+            if (inp.name === 'relacionamentos_json') return;
+            form.appendChild(inp.cloneNode(true));
+        });
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endblock %}

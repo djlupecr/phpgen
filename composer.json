@@ -1,0 +1,54 @@
+{
+    "name": "phpgen/phpgen",
+    "description": "Enterprise CRUD Generator (clone PHPRunner)",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-curl": "*",
+        "ext-zip": "*",
+        "twig/twig": "^3.0",
+        "pragmarx/google2fa": "^8.0",
+        "firebase/php-jwt": "^7.0",
+        "phpoffice/phpspreadsheet": "^2.0",
+        "dompdf/dompdf": "^3.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpGen\\": "src/"
+        },
+        "classmap": [
+            "generated/"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "check": [
+            "@php -l src/Config.php",
+            "@php -l src/Database/Introspector.php",
+            "@php -l src/Generator/Generator.php",
+            "@php -l src/Validation/BrValidator.php",
+            "@php -l src/Validation/HtmlSanitizer.php",
+            "@php -l src/Validation/BackupManager.php",
+            "@php -l public/index.php",
+            "@php -l public/install.php",
+            "@php tools/testar_validacao.php",
+            "@php tools/testar_export.php"
+        ],
+        "test": "phpunit",
+        "deploy-check": [
+            "@check",
+            "composer dump-autoload --optimize --classmap-authoritative"
+        ],
+        "test:unit": "phpunit --testsuite Unit",
+        "test:feature": "phpunit --testsuite Feature",
+        "test:integration": "phpunit --testsuite Integration",
+        "test:coverage": "phpunit --coverage-html coverage/"
+    }
+}

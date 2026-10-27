@@ -1,0 +1,79 @@
+{% extends "layout.twig" %}
+{% set title = "Configurar " ~ table %}
+{% set step = 4 %}
+{% block content %}
+<div class="card">
+    <h2>Configurar: <code>{{ table }}</code></h2>
+    
+    <h3>Colunas e Tipos de Campos</h3>
+    <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">Ajuste como cada campo será exibido no formulário.</p>
+    
+    <form method="post" action="?action=appearance">
+        <input type="hidden" name="table" value="{{ table }}">
+
+        <table style="width:100%; font-size: 0.9em;">
+            <thead>
+                <tr>
+                    <th>Coluna</th>
+                    <th>Tipo no Banco</th>
+                    <th>Tipo de Campo (Input)</th>
+                    <th>Máscara (Opcional)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in schema %}
+                <tr>
+                    <td>
+                        {{ c.name }}
+                        {% if c.key == 'PRI' %}<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:3px;font-size:.8em">PK</span>{% endif %}
+                        {% for fk in fks %}{% if fk.column == c.name %}<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:3px;font-size:.8em">FK → {{ fk.ref_table }}</span>{% endif %}{% endfor %}
+                    </td>
+                    <td><code>{{ c.raw_type }}</code></td>
+                    <td>
+                        <select name="field_types[{{ c.name }}]" style="width:100%; padding:4px;">
+                            <option value="auto" {% if c.name|lower in ['senha', 'password'] %}selected{% endif %}>Automático</option>
+                            <option value="text">Texto</option>
+                            <option value="password">Senha (oculta)</option>
+                            <option value="email">E-mail</option>
+                            <option value="number">Número</option>
+                            <option value="textarea">Texto Longo (Textarea)</option>
+                            <option value="richtext">Rich Text (WYSIWYG)</option>
+                            <option value="checkbox">Checkbox (Sim/Não)</option>
+                            <option value="date">Data</option>
+                            <option value="datetime-local">Data e Hora</option>
+                            <option value="color">Cor</option>
+                            <option value="file">Arquivo/Imagem</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select name="field_masks[{{ c.name }}]" style="width:100%; padding:4px;">
+                            <option value="">Sem máscara</option>
+                            <option value="cpf">CPF (000.000.000-00)</option>
+                            <option value="cnpj">CNPJ (00.000.000/0000-00)</option>
+                            <option value="telefone">Telefone ((00) 00000-0000)</option>
+                            <option value="cep">CEP (00000-000)</option>
+                            <option value="data">Data (00/00/0000)</option>
+                            <option value="hora">Hora (00:00)</option>
+                            <option value="moeda">Moeda (R$ 0,00)</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 style="margin-top:2rem">Páginas a gerar</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" name="pages[]" value="list" checked> List (listagem)</label>
+            <label><input type="checkbox" name="pages[]" value="edit" checked> Edit (editar)</label>
+            <label><input type="checkbox" name="pages[]" value="add" checked> Add (adicionar)</label>
+            <label><input type="checkbox" name="pages[]" value="delete" checked> Delete (excluir)</label>
+        </div>
+
+        <div class="form-actions">
+            <a href="?action=tables" class="btn btn-secondary">← Voltar</a>
+            <button type="submit" class="btn btn-success">Próximo: Aparência →</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

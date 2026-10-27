@@ -1,0 +1,129 @@
+{% extends "layout.twig" %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="text-2xl font-bold text-base-content">🎨 Editor Visual: {{ table }}</h1>
+    <p class="text-sm text-base-content/70">Arraste os campos para montar o formulário. O preview atualiza em tempo real.</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4" x-data="designer()" x-init="init()">
+    <!-- Coluna 1: Campos Disponíveis -->
+    <div class="card bg-base-100 shadow-xl p-4">
+        <h2 class="font-bold mb-3 text-lg">📋 Campos Disponíveis</h2>
+        <p class="text-xs text-base-content/60 mb-2">Arraste para o meio</p>
+        <ul id="available-fields" class="space-y-2 min-h-[200px] bg-base-200/50 rounded p-2">
+            <template x-for="field in availableFields" :key="field">
+                <li class="p-2 bg-base-200 rounded cursor-move text-sm" :data-field="field" x-text="field"></li>
+            </template>
+            <template x-if="availableFields.length === 0">
+                <li class="text-center text-xs text-base-content/40 py-4">Nenhum campo disponível</li>
+            </template>
+        </ul>
+    </div>
+
+    <!-- Coluna 2: Layout do Formulário -->
+    <div class="card bg-base-100 shadow-xl p-4">
+        <h2 class="font-bold mb-3 text-lg">📝 Layout do Formulário</h2>
+        <p class="text-xs text-base-content/60 mb-2">Arraste para reordenar ou remover</p>
+        <ul id="form-fields" class="space-y-2 min-h-[300px] bg-primary/5 border-2 border-dashed border-primary/30 rounded p-2">
+            <template x-for="field in formFields" :key="field">
+                <li class="p-2 bg-primary text-primary-content rounded cursor-move text-sm flex justify-between items-center">
+                    <span x-text="field"></span>
+                    <button @click="removeField(field)" class="text-xs opacity-70 hover:opacity-100">✕</button>
+                </li>
+            </template>
+            <template x-if="formFields.length === 0">
+                <li class="text-center text-xs text-base-content/40 py-4">Arraste campos para cá</li>
+            </template>
+        </ul>
+        <div class="mt-4 flex gap-2">
+            <button class="btn btn-primary flex-1" @click="save()">💾 Salvar Layout</button>
+            <a href="?action=configure&table={{ table }}" class="btn btn-ghost">Voltar</a>
+        </div>
+    </div>
+
+    <!-- Coluna 3: Preview -->
+    <div class="card bg-base-100 shadow-xl p-4">
+        <h2 class="font-bold mb-3 text-lg">👁️ Preview</h2>
+        <p class="text-xs text-base-content/60 mb-2">Como o formulário ficará</p>
+        <form class="space-y-3" onsubmit="return false;">
+            <template x-for="field in formFields" :key="field">
+                <div class="form-control">
+                    <label class="label py-0">
+                        <span class="label-text text-xs" x-text="field.charAt(0).toUpperCase() + field.slice(1)"></span>
+                    </label>
+                    <input type="text" class="input input-bordered input-sm" :placeholder="'Digite ' + field">
+                </div>
+            </template>
+            <template x-if="formFields.length === 0">
+                <p class="text-center text-xs text-base-content/40 py-4">Nenhum campo no formulário</p>
+            </template>
+        </form>
+    </div>
+</div>
+
+<!-- SortableJS + Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+<script>
+function designer() {
+    return {
+        availableFields: {{ available_fields|json_encode|raw }},
+        formFields: {{ form_fields|json_encode|raw }},
+
+        init() {
+            // Drag entre as duas listas
+            const available = document.getElementById('available-fields');
+            const form = document.getElementById('form-fields');
+
+            const updateState = () => {
+                // Captura a ordem final
+                this.formFields = Array.from(form.querySelectorAll('li[data-field]')).map(el => el.getAttribute('data-field'));
+                this.availableFields = Array.from(available.querySelectorAll('li[data-field]')).map(el => el.getAttribute('data-field'));
+            };
+
+            new Sortable(available, {
+                group: 'fields',
+                animation: 150,
+                onEnd: updateState,
+            });
+
+            new Sortable(form, {
+                group: 'fields',
+                animation: 150,
+                onEnd: updateState,
+            });
+        },
+
+        removeField(field) {
+            this.formFields = this.formFields.filter(f => f !== field);
+            this.availableFields.push(field);
+        },
+
+        save() {
+            fetch('?action=designer_save&table={{ table }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ csrf }}'
+                },
+                body: JSON.stringify({
+                    form_fields: this.formFields,
+                    _csrf: '{{ csrf }}'
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('✅ Layout salvo com sucesso!');
+                    window.location.reload();
+                } else {
+                    alert('❌ Erro: ' + data.message);
+                }
+            })
+            .catch(err => alert('❌ Erro: ' + err.message));
+        }
+    }
+}
+</script>
+{% endblock %}

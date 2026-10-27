@@ -1,0 +1,7 @@
+{
+    "theme": "light",
+    "radius": "rounded-lg",
+    "webhook": "",
+    "field_order": "nome,email,ativo",
+    "field_types": []
+}

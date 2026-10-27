@@ -1,0 +1,35 @@
+{% extends "layout.twig" %}
+{% set title = "Conexão" %}
+{% set step = 2 %}
+{% block content %}
+<div class="card">
+    <h2>Conectar ao banco de dados</h2>
+    {% if erro %}<div class="alert alert-error">{{ erro }}</div>{% endif %}
+    <form method="post" action="?action=connect">
+        <div class="form-group">
+            <label>Host</label>
+            <input type="text" name="host" value="{{ cfg.host|default('localhost') }}" required>
+        </div>
+        <div class="form-group">
+            <label>Porta</label>
+            <input type="number" name="port" value="{{ cfg.port|default(3306) }}" required>
+        </div>
+        <div class="form-group">
+            <label>Banco de dados</label>
+            <input type="text" name="database" value="{{ cfg.database|default('') }}" required>
+        </div>
+        <div class="form-group">
+            <label>Usuário</label>
+            <input type="text" name="user" value="{{ cfg.user|default('root') }}" required>
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" name="password" value="{{ cfg.password|default('') }}">
+        </div>
+        <div class="form-actions">
+            <a href="?action=welcome" class="btn btn-secondary">← Voltar</a>
+            <button type="submit" class="btn btn-primary">Conectar →</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

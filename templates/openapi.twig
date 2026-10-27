@@ -1,0 +1,62 @@
+{% extends "layout.twig" %}
+
+{% block content %}
+<!-- Título da página para o layout -->
+<div class="mb-4">
+    <h1 class="text-2xl font-bold text-base-content">{{ title|default('Documentação da API') }}</h1>
+    <p class="text-sm text-base-content/70">Explore e teste os endpoints da API REST do PHPGEN em tempo real.</p>
+</div>
+
+<!-- Swagger UI -->
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+<style>
+    /* Ajustes para integrar com o DaisyUI */
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info { margin: 20px 0; }
+    .swagger-ui .info .title { color: inherit; }
+    .swagger-ui .opblock-tag { border-bottom: 1px solid rgba(0,0,0,.1); }
+    .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #2563eb; }
+    .swagger-ui .opblock.opblock-post .opblock-summary-method { background: #16a34a; }
+    .swagger-ui .opblock.opblock-put .opblock-summary-method { background: #d97706; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #dc2626; }
+    .swagger-ui .btn.authorize { background-color: #2563eb; border-color: #2563eb; }
+    .swagger-ui .btn.authorize svg { fill: white; }
+    .dark .swagger-ui .opblock-tag { border-bottom-color: rgba(255,255,255,.1); }
+    .dark .swagger-ui .opblock-tag:hover { background: rgba(255,255,255,.05); }
+</style>
+
+<div id="swagger-ui" class="bg-base-100 rounded-lg shadow-lg p-4"></div>
+
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+    window.onload = () => {
+        SwaggerUIBundle({
+            url: '?action=openapi',
+            dom_id: '#swagger-ui',
+            presets: [SwaggerUIBundle.presets.apis],
+            layout: 'BaseLayout',
+            deepLinking: true,
+            docExpansion: 'list',
+            filter: true,
+            persistAuthorization: true,
+            displayRequestDuration: true,
+            // Exibe o token JWT no botão "Authorize"
+            requestInterceptor: (req) => {
+                const jwt = localStorage.getItem('swagger_jwt');
+                if (jwt) { req.headers['Authorization'] = 'Bearer ' + jwt; }
+                return req;
+            },
+            onComplete: () => {
+                // Permite salvar o token localmente ao autorizar
+                const observer = new MutationObserver(() => {
+                    const input = document.querySelector('.auth-container input');
+                    if (input && input.value) {
+                        localStorage.setItem('swagger_jwt', input.value);
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+        });
+    };
+</script>
+{% endblock %}

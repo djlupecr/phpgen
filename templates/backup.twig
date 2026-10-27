@@ -1,0 +1,37 @@
+{% extends "layout.twig" %}
+{% set title = "Backup e Restauração" %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl rounded-2xl">
+    <div class="card-body">
+        <h2 class="card-title text-primary text-2xl mb-4">💾 Backup e Restauração</h2>
+        <p class="text-base-content/70 mb-6">Exporte todo o sistema (arquivos gerados + banco de dados) para um arquivo ZIP, ou restaure um backup anterior.</p>
+
+        {% if flash_success %}
+            <div class="alert alert-success mb-6"><span>{{ flash_success }}</span></div>
+        {% endif %}
+        {% if flash_error %}
+            <div class="alert alert-error mb-6"><span>{{ flash_error }}</span></div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Download -->
+            <div class="bg-base-200 p-6 rounded-xl border border-base-300">
+                <h3 class="text-lg font-bold mb-2">Exportar Backup</h3>
+                <p class="text-sm text-base-content/70 mb-4">Gera um ZIP com a pasta <code>generated/</code> e um arquivo <code>.sql</code> contendo as tabelas e usuários.</p>
+                <a href="?action=backup_download" class="btn btn-primary w-full">⬇️ Baixar Backup (.zip)</a>
+            </div>
+
+            <!-- Restore -->
+            <div class="bg-base-200 p-6 rounded-xl border border-base-300">
+                <h3 class="text-lg font-bold mb-2">Restaurar Backup</h3>
+                <p class="text-sm text-base-content/70 mb-4">Faça upload de um arquivo <code>.zip</code> gerado por este sistema. <strong>Atenção:</strong> isso pode sobrescrever arquivos existentes.</p>
+                <form method="post" action="?action=backup_restore" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <input type="file" name="backup_file" accept=".zip" required class="file-input file-input-bordered w-full mb-4">
+                    <button type="submit" class="btn btn-warning w-full" onclick="return confirm('Tem certeza? Os arquivos gerados serão sobrescritos.')">⬆️ Restaurar Backup</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

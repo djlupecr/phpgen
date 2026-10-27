@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: [8.2]
+
+    services:
+      mysql:
+        image: mariadb:11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+          MYSQL_USER: phpgen
+          MYSQL_PASSWORD: phpgen
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo, pdo_mysql, curl, zip, mbstring, gd
+          coverage: xdebug
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Lint PHP
+        run: find src public tools -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Autoload
+        run: composer dump-autoload --optimize --classmap-authoritative
+
+      - name: Config para CI
+        run: |
+          cp src/Config.php src/Config.php.bak
+          sed -i "s/'host'     => 'localhost'/'host'     => '127.0.0.1'/" src/Config.php
+          sed -i "s/'user'     => 'root'/'user'     => 'phpgen'/" src/Config.php
+          sed -i "s/'password' => ''/'password' => 'phpgen'/" src/Config.php
+
+      - name: Criar tabelas
+        run: php tools/criar_tabelas.php || true
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --coverage-text
+
+      - name: Restore Config
+        run: mv src/Config.php.bak src/Config.php

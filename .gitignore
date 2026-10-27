@@ -1,0 +1,12 @@
+﻿vendor/
+node_modules/
+generated_backup_*
+*.log
+*.zip
+.env
+.env.testing
+.idea/
+.vscode/
+coverage/
+.phpunit.cache/
+phpgen.rar

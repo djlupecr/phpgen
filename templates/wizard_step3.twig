@@ -1,0 +1,34 @@
+{% extends "layout.twig" %}
+{% set title = "Tabelas" %}
+{% set step = 3 %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h2>Escolha uma tabela</h2>
+            <p>Conectado em <strong>{{ cfg.host }}</strong> / <strong>{{ cfg.database }}</strong></p>
+        </div>
+        <a href="?action=create_table_form" class="btn btn-success">+ Criar Nova Tabela</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Tabela</th><th style="width:200px">Ação</th></tr>
+        </thead>
+        <tbody>
+            {% for t in tables %}
+            <tr>
+                <td><code>{{ t }}</code></td>
+                <td><a href="?action=configure&table={{ t }}" class="btn btn-primary">Configurar →</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2">Nenhuma tabela encontrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="form-actions" style="margin-top: 1.5rem;">
+        <a href="?action=connect" class="btn btn-secondary">← Voltar</a>
+        <span></span>
+    </div>
+</div>
+{% endblock %}

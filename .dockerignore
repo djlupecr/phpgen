@@ -1,0 +1,10 @@
+﻿.git
+.github
+vendor
+node_modules
+generated_backup_*
+*.log
+*.zip
+.env
+.idea
+.vscode

@@ -1,0 +1,50 @@
+<?php
+return [
+    'app_name' => 'phpgen',
+    'app_desc' => 'PHP CRUD Generator',
+    'menu' => [
+        'dashboard' => 'Dashboard',
+        'tables' => 'Tables',
+        'audit' => 'Audit',
+        'tokens' => 'Tokens',
+        'roles' => 'Roles',
+        'logout' => 'Logout',
+        'theme' => 'Toggle Theme',
+    ],
+    'auth' => [
+        'login_title' => 'Login to phpgen',
+        'email' => 'E-mail',
+        'password' => 'Password',
+        'enter' => 'Login',
+        'error' => 'Invalid e-mail or password.',
+        'rate_limit' => 'Too many attempts. Please wait.',
+    ],
+    'crud' => [
+        'add' => 'Add',
+        'edit' => 'Edit',
+        'delete' => 'Delete',
+        'view' => 'View',
+        'save' => 'Save',
+        'back' => 'Back',
+        'search' => 'Search...',
+        'confirm_delete' => 'Are you sure you want to delete?',
+        'no_records' => 'No records found.',
+        'export_csv' => 'Export CSV',
+        'generate_fake' => 'Generate Data',
+    ],
+    'wizard' => [
+        'step1' => 'Database',
+        'step2' => 'Connection',
+        'step3' => 'Table',
+        'step4' => 'Pages',
+        'step5' => 'Appearance',
+        'step6' => 'Relationships',
+        'next' => 'Next',
+        'finish' => 'Finish',
+    ],
+    'messages' => [
+        'success' => 'Operation successful!',
+        'error' => 'An error occurred.',
+        'permission_denied' => 'Permission denied.',
+    ]
+];

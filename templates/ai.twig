@@ -1,0 +1,104 @@
+{% extends "layout.twig" %}
+{% set title = "AI Code Assist" %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl max-w-4xl mx-auto h-[80vh] flex flex-col">
+    <div class="card-body flex-1 overflow-y-auto" id="chat-box">
+        <div class="chat chat-start">
+            <div class="chat-bubble chat-bubble-primary">
+                Olá! Eu sou seu assistente. Descreva o sistema que você quer criar e eu gerarei o SQL para você.
+                <br><br>
+                <span class="text-sm opacity-80">Exemplo: "Crie uma tabela de produtos com nome, preço e estoque"</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Área de Input -->
+    <div class="card-body border-t bg-base-200 rounded-b-2xl">
+        <div class="flex gap-2">
+            <input type="text" id="ai-input" class="input input-bordered w-full" placeholder="Descreva sua ideia..." onkeypress="if(event.key === 'Enter') sendPrompt()">
+            <button onclick="sendPrompt()" class="btn btn-primary" id="btn-send">
+                Enviar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function sendPrompt() {
+    const input = document.getElementById('ai-input');
+    const chat = document.getElementById('chat-box');
+    const btn = document.getElementById('btn-send');
+    const text = input.value.trim();
+    
+    if (!text) return;
+
+    // Adiciona a mensagem do usuário
+    chat.innerHTML += `<div class="chat chat-end"><div class="chat-bubble chat-bubble-secondary">${text}</div></div>`;
+    input.value = '';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
+
+    // Adiciona o placeholder "Pensando..."
+    const loadingId = 'loading-' + Date.now();
+    chat.innerHTML += `<div class="chat chat-start" id="${loadingId}">
+        <div class="chat-bubble chat-bubble-primary">
+            <span class="loading loading-dots loading-sm"></span> Pensando...
+        </div>
+    </div>`;
+    chat.scrollTop = chat.scrollHeight;
+
+    fetch('?action=ai_assist', { 
+        method: 'POST', 
+        body: new URLSearchParams({prompt: text}) 
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById(loadingId).remove();
+
+        let reply = data.reply;
+        
+        // Converte HTML de volta para texto puro
+        reply = reply.replace(/<br\s*\/?>/gi, '\n');
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = reply;
+        let plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+        // Extrai o bloco SQL se existir
+        const sqlMatch = plainText.match(/```sql\n?([\s\S]*?)```/i);
+        if (sqlMatch) {
+            plainText = sqlMatch[1].trim();
+            
+            // Cria o bloco de código com cores corrigidas
+            const codeBlock = document.createElement('pre');
+            // text-base-content garante que a fonte seja escura (ou clara no dark mode)
+            codeBlock.className = 'bg-base-300 text-base-content p-4 rounded-lg overflow-x-auto text-sm font-mono border border-base-content/20 w-full';
+            codeBlock.textContent = plainText;
+            
+            // Cria o container do chat
+            const newDiv = document.createElement('div');
+            newDiv.className = 'chat chat-start w-full';
+            
+            const bubble = document.createElement('div');
+            // bg-base-200 para o balão do chat não ser roxo, deixando o código legível
+            bubble.className = 'chat-bubble bg-base-200 text-base-content w-full max-w-none';
+            bubble.appendChild(codeBlock);
+            
+            newDiv.appendChild(bubble);
+            chat.appendChild(newDiv);
+        } else {
+            chat.innerHTML += `<div class="chat chat-start"><div class="chat-bubble chat-bubble-primary prose max-w-none">${data.reply}</div></div>`;
+        }
+        
+        chat.scrollTop = chat.scrollHeight;
+    })
+    .catch(() => {
+        document.getElementById(loadingId).remove();
+        chat.innerHTML += `<div class="chat chat-start"><div class="chat-bubble chat-bubble-error">Erro de conexão. Tente novamente.</div></div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = 'Enviar';
+    });
+}
+</script>
+{% endblock %}

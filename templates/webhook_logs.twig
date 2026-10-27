@@ -1,0 +1,67 @@
+{% extends "layout.twig" %}
+{% set title = "Logs de Webhook" %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl rounded-2xl">
+    <div class="card-body">
+        <h2 class="card-title text-primary text-2xl mb-4">🪝 Logs de Webhook</h2>
+        <p class="text-base-content/70 mb-6">Histórico de disparos para integrações externas.</p>
+
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-base-200">
+                        <th>Data</th>
+                        <th>Ação</th>
+                        <th>Tabela</th>
+                        <th>Status HTTP</th>
+                        <th>Tentativas</th>
+                        <th>URL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in logs %}
+                        <tr class="hover">
+                            <td class="text-xs whitespace-nowrap">{{ l.created_at }}</td>
+                            <td>
+                                {% if l.action == 'CREATE' %}<span class="badge badge-success text-white">CREATE</span>{% endif %}
+                                {% if l.action == 'UPDATE' %}<span class="badge badge-info text-white">UPDATE</span>{% endif %}
+                                {% if l.action == 'DELETE' %}<span class="badge badge-error text-white">DELETE</span>{% endif %}
+                            </td>
+                            <td class="text-sm">{{ l.table_name }} #{{ l.record_id }}</td>
+                            <td>
+                                {% if l.status_code >= 200 and l.status_code < 300 %}
+                                    <span class="badge badge-success text-white">{{ l.status_code }}</span>
+                                {% else %}
+                                    <span class="badge badge-error text-white">{{ l.status_code }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if l.attempt > 1 %}
+                                    <span class="text-warning font-bold">{{ l.attempt }}x</span>
+                                {% else %}
+                                    <span class="text-success">1x</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs max-w-xs truncate" title="{{ l.url }}">{{ l.url }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="text-center py-8 text-base-content/50">Nenhum log registrado ainda.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if totalPages > 1 %}
+        <div class="flex justify-center gap-2 mt-4">
+            {% if page > 1 %}
+                <a href="?action=webhook_logs&page={{ page - 1 }}" class="btn btn-sm">« Anterior</a>
+            {% endif %}
+            <span class="btn btn-sm btn-active no-animation">{{ page }} / {{ totalPages }}</span>
+            {% if page < totalPages %}
+                <a href="?action=webhook_logs&page={{ page + 1 }}" class="btn btn-sm">Próxima »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

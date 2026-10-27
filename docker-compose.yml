@@ -1,0 +1,49 @@
+services:
+  app:
+    build: .
+    container_name: phpgen-app
+    ports:
+      - "8000:80"
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: test
+      DB_USER: phpgen
+      DB_PASS: phpgen
+    volumes:
+      - ./src:/var/www/html/src
+      - ./templates:/var/www/html/templates
+      - ./locales:/var/www/html/locales
+      - ./public:/var/www/html/public
+      - ./generated:/var/www/html/generated
+      - ./tools:/var/www/html/tools
+      - ./tests:/var/www/html/tests
+      - ./phpunit.xml:/var/www/html/phpunit.xml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11
+    container_name: phpgen-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+      MYSQL_USER: phpgen
+      MYSQL_PASSWORD: phpgen
+    ports:
+      - "3307:3306"
+    volumes:
+      - phpgen-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  phpgen-db:

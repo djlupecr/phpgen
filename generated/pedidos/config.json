@@ -1,0 +1,7 @@
+{
+    "theme": "light",
+    "radius": "rounded-lg",
+    "webhook": "",
+    "field_order": "id,usuario_id,produto_id,quantidade,total,criado_em,deleted_at",
+    "field_types": []
+}

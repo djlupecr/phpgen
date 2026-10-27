@@ -1,0 +1,182 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PHPGEN API",
+    "description": "API REST do PHPGEN — CRUD gerado, autenticação JWT/Bearer, exportações.",
+    "version": "2.3.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8000", "description": "Local" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT ou Token de API"
+      }
+    },
+    "schemas": {
+      "SuccessList": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "total": { "type": "integer" },
+          "data": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "SuccessItem": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "data": { "type": "object" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "error" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/?action=health": {
+      "get": {
+        "summary": "Health-check",
+        "description": "Verifica db, libs, config, generated e uploads. Público.",
+        "security": [],
+        "responses": {
+          "200": { "description": "Sistema OK" },
+          "503": { "description": "Sistema degradado" }
+        }
+      }
+    },
+    "/?action=openapi": {
+      "get": {
+        "summary": "Documentação OpenAPI",
+        "security": [],
+        "responses": { "200": { "description": "JSON OpenAPI" } }
+      }
+    },
+    "/?action=login&format=json": {
+      "post": {
+        "summary": "Login (retorna JWT)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "admin@teste.com" },
+                  "senha": { "type": "string", "example": "123456" }
+                },
+                "required": ["email", "senha"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "user": { "type": "object" },
+                    "csrf": { "type": "string" },
+                    "jwt": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Credenciais inválidas ou 2FA necessário" }
+        }
+      }
+    },
+    "/?action=api&table={table}": {
+      "get": {
+        "summary": "Lista registros",
+        "parameters": [
+          { "name": "table", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 25, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": { "description": "Lista", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessList" } } } },
+          "401": { "description": "Token inválido", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Permissão negada" }
+        }
+      },
+      "post": {
+        "summary": "Cria registro",
+        "parameters": [
+          { "name": "table", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object" } } }
+        },
+        "responses": {
+          "201": { "description": "Criado" },
+          "400": { "description": "Payload inválido" },
+          "403": { "description": "Permissão negada" }
+        }
+      },
+      "put": {
+        "summary": "Atualiza registro",
+        "parameters": [
+          { "name": "table", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object" } } }
+        },
+        "responses": {
+          "200": { "description": "Atualizado" },
+          "403": { "description": "Permissão negada" }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete",
+        "parameters": [
+          { "name": "table", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Deletado" },
+          "403": { "description": "Permissão negada" }
+        }
+      }
+    },
+    "/?action=export&table={table}": {
+      "get": {
+        "summary": "Exporta CSV",
+        "parameters": [{ "name": "table", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Arquivo CSV" } }
+      }
+    },
+    "/?action=export_excel&table={table}": {
+      "get": {
+        "summary": "Exporta XLSX",
+        "parameters": [{ "name": "table", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Arquivo XLSX" } }
+      }
+    },
+    "/?action=export_pdf&table={table}": {
+      "get": {
+        "summary": "Exporta PDF",
+        "parameters": [{ "name": "table", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Arquivo PDF" } }
+      }
+    }
+  }
+}

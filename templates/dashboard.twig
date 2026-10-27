@@ -1,0 +1,196 @@
+{% extends "layout.twig" %}
+{% set title = "Dashboard" %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="card bg-base-100 shadow-xl rounded-2xl p-6">
+    
+    <!-- Cabeçalho -->
+    <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-primary">Painel Analítico</h2>
+            <p class="text-base-content/70">Visão geral em tempo real da sua base de dados</p>
+        </div>
+        <div class="flex gap-2 items-center">
+            <label class="cursor-pointer label gap-2">
+                <span class="label-text text-sm">Auto-refresh (60s)</span>
+                <input type="checkbox" id="auto-refresh" class="toggle toggle-primary toggle-sm" onchange="toggleAutoRefresh()">
+            </label>
+            <a href="?action=tables" class="btn btn-primary btn-sm">Gerenciar Tabelas →</a>
+        </div>
+    </div>
+
+    <!-- Cards de KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {% for s in stats %}
+        <div class="stats shadow bg-base-200 border-l-4 border-primary">
+            <div class="stat">
+                <div class="stat-title text-xs">{{ s.name }}</div>
+                <div class="stat-value text-primary">{{ s.count }}</div>
+                <div class="stat-desc text-xs">registros ativos</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Gráficos -->
+    {% if stats %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Gráfico de Linha (Crescimento) -->
+        <div class="bg-base-200 p-4 rounded-xl shadow-inner lg:col-span-2">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">📈 Crescimento de <span class="text-primary">{{ mainTable }}</span> (Últimos 30 dias)</h3>
+            </div>
+            <div class="h-64">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico de Barras (Top 5 Tabelas) -->
+        <div class="bg-base-200 p-4 rounded-xl shadow-inner">
+            <h3 class="font-bold text-lg mb-4">🏆 Top 5 Tabelas (Registros)</h3>
+            <div class="h-64">
+                <canvas id="top5Chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico de Pizza (Status Ativo/Inativo) -->
+        <div class="bg-base-200 p-4 rounded-xl shadow-inner">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">🥧 Distribuição de Status</h3>
+                <select id="tableSelector" class="select select-sm select-bordered w-40">
+                    {% for t, data in chartData %}
+                        <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="h-64 flex justify-center">
+                <canvas id="pieChart"></canvas>
+            </div>
+            <p id="noDataMsg" class="text-center text-sm text-gray-500 mt-2 hidden">Nenhum dado de status para esta tabela.</p>
+        </div>
+
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Dados do PHP
+    const timelineData = {{ timelineJson|raw }};
+    const top5Data = {{ top5Json|raw }};
+    const chartData = {{ chartJson|raw }};
+
+    // --- Gráfico 1: Linha do Tempo ---
+    new Chart(document.getElementById('timelineChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: timelineData.labels,
+            datasets: [{
+                label: 'Novos registros',
+                data: timelineData.data,
+                borderColor: 'rgba(37, 99, 235, 1)',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+
+    // --- Gráfico 2: Top 5 ---
+    new Chart(document.getElementById('top5Chart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(top5Data),
+            datasets: [{
+                label: 'Registros',
+                data: Object.values(top5Data),
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+
+    // --- Gráfico 3: Pizza (Doughnut) ---
+    let pieChartInstance = null;
+    function renderPieChart(table) {
+        if (pieChartInstance) pieChartInstance.destroy();
+        
+        const data = chartData[table];
+        const noDataMsg = document.getElementById('noDataMsg');
+        const canvas = document.getElementById('pieChart');
+
+        if (!data || data.length === 0) {
+            noDataMsg.classList.remove('hidden');
+            canvas.style.display = 'none';
+            return;
+        }
+
+        noDataMsg.classList.add('hidden');
+        canvas.style.display = 'block';
+
+        const labelMap = { '1': 'Ativo', '0': 'Inativo' };
+        const pieLabels = data.map(item => labelMap[String(item.ativo)] ?? 'Outro');
+        const pieData = data.map(item => parseInt(item.total));
+
+        pieChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(239, 68, 68, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    const firstTable = Object.keys(chartData)[0];
+    if (firstTable) renderPieChart(firstTable);
+    else document.getElementById('noDataMsg').classList.remove('hidden');
+
+    document.getElementById('tableSelector').addEventListener('change', function() {
+        renderPieChart(this.value);
+    });
+
+    // --- Auto-refresh ---
+    let refreshInterval = null;
+    function toggleAutoRefresh() {
+        const active = document.getElementById('auto-refresh').checked;
+        if (active) {
+            refreshInterval = setInterval(() => { window.location.reload(); }, 60000);
+            localStorage.setItem('dashboard_auto_refresh', '1');
+        } else {
+            clearInterval(refreshInterval);
+            localStorage.setItem('dashboard_auto_refresh', '0');
+        }
+    }
+
+    if (localStorage.getItem('dashboard_auto_refresh') === '1') {
+        document.getElementById('auto-refresh').checked = true;
+        toggleAutoRefresh();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "layout.twig" %}
+{% set title = "Aparência e Campos" %}
+{% set step = 5 %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<div class="card bg-base-100 shadow-xl rounded-2xl">
+    <div class="card-body">
+        <h2 class="card-title text-primary text-2xl">Passo 5 — Personalização Visual</h2>
+        <p class="text-base-content/70 mb-4">
+            Personalize o tema, layout e <strong>arraste os campos</strong> para definir a ordem no formulário.
+        </p>
+
+        <form method="post" action="?action=relationships" id="form-appearance">
+            <input type="hidden" name="table" value="{{ table }}">
+            {% for p in pages %}<input type="hidden" name="pages[]" value="{{ p }}">{% endfor %}
+            {% for k, v in fieldTypes %}<input type="hidden" name="field_types[{{ k }}]" value="{{ v }}">{% endfor %}
+            {% for k, v in fieldMasks %}<input type="hidden" name="field_masks[{{ k }}]" value="{{ v }}">{% endfor %}
+
+            <!-- Container oculto que recebe a ordem (preenchido por JS) -->
+            <input type="hidden" name="field_order" id="field_order"
+                   value="{{ formData.field_order ?? '' }}">
+
+            <!-- Tema e layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Tema</span></label>
+                    <select name="theme" class="select select-bordered">
+                        {% set curTheme = formData.theme ?? 'light' %}
+                        <option value="light" {% if curTheme == 'light' %}selected{% endif %}>Light</option>
+                        <option value="dark" {% if curTheme == 'dark' %}selected{% endif %}>Dark</option>
+                        <option value="cupcake" {% if curTheme == 'cupcake' %}selected{% endif %}>Cupcake</option>
+                        <option value="synthwave" {% if curTheme == 'synthwave' %}selected{% endif %}>Synthwave</option>
+                        <option value="emerald" {% if curTheme == 'emerald' %}selected{% endif %}>Emerald</option>
+                        <option value="cyberpunk" {% if curTheme == 'cyberpunk' %}selected{% endif %}>Cyberpunk</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Arredondamento</span></label>
+                    <select name="border_radius" class="select select-bordered">
+                        {% set curRadius = formData.border_radius ?? 'rounded-lg' %}
+                        <option value="rounded-none" {% if curRadius == 'rounded-none' %}selected{% endif %}>Nenhum</option>
+                        <option value="rounded" {% if curRadius == 'rounded' %}selected{% endif %}>Pequeno</option>
+                        <option value="rounded-lg" {% if curRadius == 'rounded-lg' %}selected{% endif %}>Médio</option>
+                        <option value="rounded-full" {% if curRadius == 'rounded-full' %}selected{% endif %}>Total</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Espessura da borda</span></label>
+                    <select name="border_width" class="select select-bordered">
+                        {% set curBorder = formData.border_width ?? 'border' %}
+                        <option value="border" {% if curBorder == 'border' %}selected{% endif %}>Normal</option>
+                        <option value="border-2" {% if curBorder == 'border-2' %}selected{% endif %}>Grossa</option>
+                        <option value="border-4" {% if curBorder == 'border-4' %}selected{% endif %}>Muito grossa</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Colunas no form</span></label>
+                    <select name="form_layout" class="select select-bordered">
+                        {% set curLayout = formData.form_layout ?? '1' %}
+                        <option value="1" {% if curLayout == '1' %}selected{% endif %}>1 coluna</option>
+                        <option value="2" {% if curLayout == '2' %}selected{% endif %}>2 colunas</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Webhook -->
+            <div class="form-control mb-6">
+                <label class="label"><span class="label-text font-semibold">Webhook (URL para POST após save/delete)</span></label>
+                <input type="url" name="webhook_url" value="{{ formData.webhook_url ?? '' }}"
+                       placeholder="https://discord.com/api/webhooks/..."
+                       class="input input-bordered w-full">
+                <label class="label"><span class="label-text-alt">Opcional. Dispara JSON com {action, table, id}.</span></label>
+            </div>
+
+            <!-- PAGE DESIGNER -->
+            <div class="divider">Ordem dos Campos (arraste para reordenar)</div>
+
+            <div id="field-list" class="space-y-2">
+                {% for c in schema %}
+                    {% if c.name != 'deleted_at' %}
+                    <div class="field-item flex items-center gap-3 p-3 bg-base-200 rounded-lg cursor-move border border-base-300"
+                         data-field="{{ c.name }}">
+                        <span class="text-2xl select-none" title="Arraste">⋮⋮</span>
+                        <span class="badge badge-primary">{{ c.type }}</span>
+                        <input type="text" name="labels[{{ c.name }}]"
+                               value="{{ formData.labels[c.name] ?? c.name|capitalize }}"
+                               class="input input-sm input-bordered flex-1" placeholder="Label">
+                        <input type="checkbox" name="show_in_grid[{{ c.name }}]" value="1"
+                               class="checkbox checkbox-sm checkbox-primary" title="Mostrar na Grid"
+                               {% if formData.show_in_grid[c.name] is not defined or formData.show_in_grid[c.name] %}checked{% endif %}>
+                        <span class="text-xs">Grid</span>
+                        <input type="checkbox" name="show_in_form[{{ c.name }}]" value="1"
+                               class="checkbox checkbox-sm checkbox-success" title="Mostrar no Form"
+                               {% if formData.show_in_form[c.name] is not defined or formData.show_in_form[c.name] %}checked{% endif %}>
+                        <span class="text-xs">Form</span>
+                        <input type="checkbox" name="required_field[{{ c.name }}]" value="1"
+                               class="checkbox checkbox-sm checkbox-warning" title="Obrigatório"
+                               {% if formData.required_field[c.name] %}checked{% endif %}>
+                        <span class="text-xs">Obrig.</span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="flex justify-between mt-6">
+                <a href="?action=configure&table={{ table }}" class="btn btn-ghost">← Voltar</a>
+                <button type="submit" class="btn btn-primary">Próximo → Relacionamentos</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const fieldList  = document.getElementById('field-list');
+    const orderInput = document.getElementById('field_order');
+
+    function syncOrder() {
+        const names = [...fieldList.querySelectorAll('.field-item')]
+            .map(el => el.getAttribute('data-field'));
+        orderInput.value = names.join(',');
+    }
+
+    new Sortable(fieldList, {
+        animation: 150,
+        handle: '.field-item',
+        ghostClass: 'opacity-50',
+        onEnd: syncOrder,
+    });
+
+    // Ordem inicial (se já veio do formData, reaplica)
+    const initialOrder = orderInput.value;
+    if (initialOrder) {
+        const arr = initialOrder.split(',');
+        arr.forEach(name => {
+            const el = fieldList.querySelector(`[data-field="${name}"]`);
+            if (el) fieldList.appendChild(el);
+        });
+    }
+    syncOrder();
+
+    document.getElementById('form-appearance').addEventListener('submit', syncOrder);
+</script>
+{% endblock %}

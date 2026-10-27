@@ -1,0 +1,20 @@
+{% extends "layout.twig" %}
+{% set title = "Bem-vindo" %}
+{% set step = 1 %}
+{% block content %}
+<div class="card">
+    <h2>Bem-vindo ao phpgen</h2>
+    <p>Este assistente vai guiá-lo na criação de um CRUD PHP completo.</p>
+    <p>O gerador vai:</p>
+    <ul>
+        <li>Conectar ao seu banco de dados</li>
+        <li>Listar as tabelas</li>
+        <li>Permitir escolher as páginas (List, Edit, Add, Delete)</li>
+        <li>Gerar o código PHP pronto para uso</li>
+    </ul>
+    <div class="form-actions">
+        <span></span>
+        <a href="?action=connect" class="btn btn-primary">Começar →</a>
+    </div>
+</div>
+{% endblock %}

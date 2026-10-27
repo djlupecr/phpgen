@@ -1,0 +1,133 @@
+{% extends "layout.twig" %}
+{% set title = "Auditoria" %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl rounded-2xl">
+    <div class="card-body">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h2 class="card-title text-primary text-2xl">🔍 Auditoria</h2>
+                <p class="text-base-content/70">
+                    {{ total }} registro(s) encontrado(s)
+                </p>
+            </div>
+            <a href="?action=audit&export=1{% for k, v in filters %}{% if v %}&{{ k }}={{ v|url_encode }}{% endif %}{% endfor %}"
+               class="btn btn-success">
+                ⬇️ Exportar CSV
+            </a>
+        </div>
+
+        <form method="get" class="bg-base-200 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-6 gap-3">
+            <input type="hidden" name="action" value="audit">
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">Usuário</span></label>
+                <select name="user" class="select select-sm select-bordered">
+                    <option value="">Todos</option>
+                    {% for u in users %}
+                        <option value="{{ u.id }}" {% if filters.user == u.id %}selected{% endif %}>
+                            {{ u.nome }} ({{ u.email }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">Ação</span></label>
+                <select name="action_f" class="select select-sm select-bordered">
+                    <option value="">Todas</option>
+                    {% for a in actions %}
+                        <option value="{{ a }}" {% if filters.action == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">Tabela</span></label>
+                <select name="table_f" class="select select-sm select-bordered">
+                    <option value="">Todas</option>
+                    {% for t in tablesWithLogs %}
+                        <option value="{{ t }}" {% if filters.table == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">De</span></label>
+                <input type="date" name="from" value="{{ filters.from }}" class="input input-sm input-bordered">
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">Até</span></label>
+                <input type="date" name="to" value="{{ filters.to }}" class="input input-sm input-bordered">
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text text-xs">&nbsp;</span></label>
+                <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+            </div>
+        </form>
+
+        <div class="overflow-x-auto">
+            <table class="table table-sm table-zebra w-full">
+                <thead>
+                    <tr class="bg-base-200">
+                        <th>#</th>
+                        <th>Data</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Tabela</th>
+                        <th>ID</th>
+                        <th>IP</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in logs %}
+                        <tr class="hover">
+                            <td class="text-xs">{{ l.id }}</td>
+                            <td class="text-xs">{{ l.created_at }}</td>
+                            <td class="text-xs">
+                                {% if l.user_nome %}
+                                    {{ l.user_nome }}<br>
+                                    <span class="text-gray-400">{{ l.user_email }}</span>
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if l.action == 'CREATE' %}
+                                    <span class="badge badge-success">CREATE</span>
+                                {% elseif l.action == 'UPDATE' %}
+                                    <span class="badge badge-info">UPDATE</span>
+                                {% elseif l.action == 'DELETE' %}
+                                    <span class="badge badge-error">DELETE</span>
+                                {% else %}
+                                    <span class="badge">{{ l.action }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs">{{ l.table_name }}</td>
+                            <td class="text-xs">{{ l.record_id ?? '-' }}</td>
+                            <td class="text-xs">{{ l.ip_address ?? '-' }}</td>
+                            <td class="text-xs max-w-xs truncate" title="{{ l.details }}">{{ l.details ?? '' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-8 text-base-content/50">
+                                Nenhum log encontrado com esses filtros.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if totalPages > 1 %}
+        <div class="flex justify-center gap-2 mt-4">
+            {% if page > 1 %}
+                <a href="?action=audit&page={{ page - 1 }}{% for k, v in filters %}{% if v %}&{{ k }}={{ v|url_encode }}{% endif %}{% endfor %}"
+                   class="btn btn-sm">« Anterior</a>
+            {% endif %}
+            <span class="btn btn-sm btn-active no-animation">{{ page }} / {{ totalPages }}</span>
+            {% if page < totalPages %}
+                <a href="?action=audit&page={{ page + 1 }}{% for k, v in filters %}{% if v %}&{{ k }}={{ v|url_encode }}{% endif %}{% endfor %}"
+                   class="btn btn-sm">Próxima »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
